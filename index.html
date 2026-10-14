@@ -261,6 +261,35 @@ legend { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; padding: 0;
 }
 ol.mini { margin: 0; padding-left: 18px; display: grid; gap: 10px; }
 ol.mini label { color: var(--fg); }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+label.sm { font-size: 11.5px; }
+.ends { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+.ends .mid { display: flex; flex-direction: column; align-items: center; }
+.ends .mid::before { content: ''; width: 1px; height: 5px; background: var(--line-2); margin-bottom: 1px; }
+.seatrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.seatrow label { margin: 0; }
+.seatout { font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 19ch; text-align: right; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.hint.warn { color: var(--warn); }
+.hint.measured { color: var(--good); }
+dialog.wide { width: min(720px, calc(100vw - 32px)); }
+.mstep { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.mstep h4 { margin: 0; font-size: 14px; }
+.mstep h4 .hint { font-weight: 400; margin-left: 6px; }
+ol.msteps { margin: 0; padding-left: 22px; display: grid; gap: 4px; font-size: 13px; color: var(--fg); }
+details.mstep > summary { font-weight: 600; font-size: 14px; color: var(--fg); cursor: pointer; }
+details.mstep { display: block; }
+details.mstep > * + * { margin-top: 8px; }
+.mtab-wrap { overflow-x: auto; }
+.mtab { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.mtab th, .mtab td { padding: 3px 4px; text-align: left; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.mtab tbody th { color: var(--fg); }
+.mtab input { min-width: 64px; padding: 5px 6px; }
+.mtab .mrm { padding: 2px 8px; }
+.mstep > .btn { justify-self: start; }
+.measout { font-size: 13px; display: grid; gap: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.measout p { margin: 0; }
+#measDlg[data-mode="own"] .smp { display: none; }
 details.extra > summary { font-weight: 500; }
 .extra-body { display: grid; gap: 12px; margin-top: 10px; }
 </style>
@@ -346,6 +375,8 @@ details.extra > summary { font-weight: 500; }
           <li><b>Higher gain brightens everything.</b> Going from 1.2 to 1.5 gain makes white, black and every shade in between 25% brighter.</li>
           <li><b>In a dark room, contrast stays the same,</b> because black gets brighter by the same amount as white.</li>
           <li><b>A bigger screen spreads the same light over more area.</b> Going from 120 to 150 inches makes the picture (120 ÷ 150)² = 0.64 times as bright, unless higher gain makes up for it.</li>
+          <li><b>Wide screens (2.39:1)</b> are worked out from the projector's whole 16:9 frame: wide movies fill the screen's width, 16:9 pictures its height, so 16:9 pictures come out brighter.</li>
+          <li><b>Where each screen sends its light.</b> Fresnel and lenticular screens send it straight out toward the room (so from a side seat, the near side of the screen looks brighter than the far side), high-gain white and grey ALR work like a dull mirror, glass bead sends it back toward the projector, and matte screens spread it evenly. With your seat and your projector's position, that sets how bright each part of the screen looks, side to side and up and down.</li>
           <li><b>Ambient light adds the same amount of light everywhere,</b> so it washes out dark scenes first. That's why blocking ambient light can matter more than gain in a bright room.</li>
           <li><b>Both pictures use the same brightness scale,</b> so the difference you see between A and B is real.</li>
           <li><b>Your own measured curve is used exactly</b> when you load a ColourSpace or CSV file, including shadows that are darker or brighter than the standard.</li>
@@ -356,14 +387,16 @@ details.extra > summary { font-weight: 500; }
       <article>
         <h3>Best guesses</h3>
         <ul>
-          <li><b>Gain numbers</b> from screen makers are often a bit high. For the best result, measure a sample of the new screen (Screen B → Fine-tune). The "How sure" line under the picture tells you which numbers are measured and which are estimates.</li>
-          <li><b>Sitting to the side</b> uses one number per screen. Real screens vary a little.</li>
+          <li><b>Gain numbers</b> from screen makers are often a bit high. For the best result, measure a sample of the new screen (Screens → Measure your screens). The "How sure" line under the picture tells you which numbers are measured and which are estimates.</li>
+          <li><b>Dimming away from the main seat</b> uses typical numbers for each kind of screen, side to side and up and down, until you measure it from a few seats. Screen makers rarely publish these numbers (a "viewing angle" on a spec sheet doesn't say how much dimmer it gets), so the typical ones are estimates, checked only for being physically possible. Measured readings are fitted with a smooth curve, and the app tells you how well they fit.</li>
+          <li><b>Projector position</b> is a typical spot for each choice (ultra short throw, or a long-throw projector on the ceiling, a shelf or a table). It matters most for mirror-like and glass bead screens.</li>
           <li><b>Bigger screen:</b> if you zoom the lens to fill it, some projectors lose a little more light than the math shows.</li>
-          <li><b>Blocks ambient light</b> is one number. Real screens block light from the ceiling better than light from behind you.</li>
+          <li><b>Blocking room light</b> uses a typical number for each kind of screen until you measure a sample under your own lights. Then it's exact for your room. (Real ALR screens block ceiling light better than light from behind you; measuring captures that for your room.)</li>
           <li><b>Dynamic iris</b> is shown as a perfect iris that closes as much as each picture allows.</li>
           <li><b>HDR tone mapping</b> uses the standard curve. Your projector or video processor (Lumagen, madVR and others) tone-maps in its own way, so bright parts can look a bit different.</li>
           <li><b>Built-in HDR pictures</b> other than "HDR brightness steps" are SDR photos given an HDR grade by this app. Use your own HDR frame grabs for real HDR.</li>
-          <li><b>Not shown:</b> color changes caused by the screen, screen texture or sparkle, and HDR brightness above your monitor's white.</li>
+          <li><b>Screen color</b> is shown only when you measure it (x and y readings). Recalibrating for the new screen fixes its color in the middle, at a small cost in brightness, but not how color changes off to the side.</li>
+          <li><b>Not shown:</b> screen texture and sparkle (a monitor can't show them, so only seeing a sample in person tells you), hot spots that come from a screen's surface rather than its overall shape, and HDR brightness above your monitor's white.</li>
         </ul>
       </article>
       <article>
@@ -387,6 +420,7 @@ details.extra > summary { font-weight: 500; }
           <li>Do this for each setting (Iris 2, Iris 3 and so on) and save each one as a reading. You can save up to 10.</li>
           <li>Dynamic iris: measure the all-black picture with it on, and again with it off.</li>
           <li>Ambient light: see "How do I measure it?" in the Ambient light panel.</li>
+          <li>Screens: Screens → Measure your screens takes readings from a few seats, room light and color, on your screen and on a sample of the new one.</li>
         </ol>
       </article>
     </div>
@@ -463,17 +497,26 @@ details.extra > summary { font-weight: 500; }
         <div class="scard">
           <div class="shead"><span class="badge a">A</span><div><strong>Your screen</strong><span class="sub">The one you have now</span></div></div>
           <div><label for="aPreset">Screen type</label><select id="aPreset"></select></div>
-          <div class="grid2">
+          <div class="grid3">
             <div><label for="aGain">Gain</label><input type="number" id="aGain" min="0.1" max="5" step="0.05"></div>
-            <div><label for="aSize">Size</label><div class="suffix"><input type="number" id="aSize" min="40" max="400" step="1"><span>inches</span></div></div>
+            <div><label for="aSize">Size</label><div class="suffix"><input type="number" id="aSize" min="40" max="400" step="1"><span>in</span></div></div>
+            <div><label for="aShape">Shape</label><select id="aShape"><option value="16:9">16:9</option><option value="2.39">2.39:1 wide</option></select></div>
           </div>
+          <p class="hint warn" id="aWarn" hidden></p>
           <details class="fine" id="aFine">
             <summary>Fine-tune</summary>
             <div style="margin-bottom:8px"><label for="aName">Name</label><input type="text" id="aName" maxlength="40"></div>
             <div class="grid2">
-              <div><label for="aRej">Blocks ambient light</label><div class="suffix"><input type="number" id="aRej" min="0" max="95" step="1"><span>%</span></div></div>
-              <div><label for="aHalf">Half as bright at</label><div class="suffix"><input type="number" id="aHalf" min="0" max="90" step="1"><span>° to the side</span></div></div>
+              <div><label for="aRej">Blocks room light</label><div class="suffix"><input type="number" id="aRej" min="0" max="95" step="1"><span>%</span></div></div>
             </div>
+            <p class="hint measured" id="aAmbMeas" hidden></p>
+            <span class="lbl" style="margin-top:8px">Half as bright when you're this far off</span>
+            <div class="grid2">
+              <div><label for="aHalfH" class="sm">Side to side</label><div class="suffix"><input type="number" id="aHalfH" min="0" max="90" step="1"><span>°</span></div></div>
+              <div><label for="aHalfV" class="sm">Up and down</label><div class="suffix"><input type="number" id="aHalfV" min="0" max="90" step="1"><span>°</span></div></div>
+            </div>
+            <div style="margin-top:8px"><label for="aLobe">Sends light</label><select id="aLobe"></select></div>
+            <p class="hint measured" id="aMeas" hidden></p>
             <details class="sub-details">
               <summary>Check your screen's real gain</summary>
               <p class="hint" style="margin:6px 0 8px">Put an all-white picture on the screen, then take two readings:</p>
@@ -489,45 +532,42 @@ details.extra > summary { font-weight: 500; }
             </details>
           </details>
         </div>
-
         <div class="scard">
           <div class="shead"><span class="badge b">B</span><div><strong>Screen you want</strong><span class="sub">Same projector, same settings</span></div></div>
           <div><label for="bPreset">Screen type</label><select id="bPreset"></select></div>
-          <div class="grid2">
+          <div class="grid3">
             <div><label for="bGain">Gain</label><input type="number" id="bGain" min="0.1" max="5" step="0.05"></div>
-            <div><label for="bSize">Size</label><div class="suffix"><input type="number" id="bSize" min="40" max="400" step="1"><span>inches</span></div></div>
+            <div><label for="bSize">Size</label><div class="suffix"><input type="number" id="bSize" min="40" max="400" step="1"><span>in</span></div></div>
+            <div><label for="bShape">Shape</label><select id="bShape"><option value="16:9">16:9</option><option value="2.39">2.39:1 wide</option></select></div>
           </div>
+          <p class="hint warn" id="bWarn" hidden></p>
           <details class="fine" id="bFine">
             <summary>Fine-tune</summary>
             <div style="margin-bottom:8px"><label for="bName">Name</label><input type="text" id="bName" maxlength="40"></div>
             <div class="grid2">
-              <div><label for="bRej">Blocks ambient light</label><div class="suffix"><input type="number" id="bRej" min="0" max="95" step="1"><span>%</span></div></div>
-              <div><label for="bHalf">Half as bright at</label><div class="suffix"><input type="number" id="bHalf" min="0" max="90" step="1"><span>° to the side</span></div></div>
+              <div><label for="bRej">Blocks room light</label><div class="suffix"><input type="number" id="bRej" min="0" max="95" step="1"><span>%</span></div></div>
             </div>
-            <details class="sub-details">
-              <summary>Measure a sample of this screen</summary>
-              <p class="hint" style="margin:6px 0 8px">Got a small sample of this screen? Tape it to the middle of your screen. Sit in your seat, point the meter at the screen, and take these readings:</p>
-              <ol class="mini">
-                <li><label for="smpWA">All-white picture: your screen, right next to the sample</label><div class="suffix"><input type="number" id="smpWA" min="0" step="any"><span class="u">nits</span></div></li>
-                <li><label for="smpWB">All-white picture: the sample</label><div class="suffix"><input type="number" id="smpWB" min="0" step="any"><span class="u">nits</span></div></li>
-                <li><label for="smpLA">Projector off, lights on: your screen (optional)</label><div class="suffix"><input type="number" id="smpLA" min="0" step="any"><span class="u">nits</span></div></li>
-                <li><label for="smpLB">Projector off, lights on: the sample (optional)</label><div class="suffix"><input type="number" id="smpLB" min="0" step="any"><span class="u">nits</span></div></li>
-              </ol>
-              <div class="row between" style="margin-top:8px">
-                <span class="gainout" id="smpOut">Enter the two white readings</span>
-                <button type="button" class="btn small" id="smpUse" disabled>Use these</button>
-              </div>
-            </details>
+            <p class="hint measured" id="bAmbMeas" hidden></p>
+            <span class="lbl" style="margin-top:8px">Half as bright when you're this far off</span>
+            <div class="grid2">
+              <div><label for="bHalfH" class="sm">Side to side</label><div class="suffix"><input type="number" id="bHalfH" min="0" max="90" step="1"><span>°</span></div></div>
+              <div><label for="bHalfV" class="sm">Up and down</label><div class="suffix"><input type="number" id="bHalfV" min="0" max="90" step="1"><span>°</span></div></div>
+            </div>
+            <div style="margin-top:8px"><label for="bLobe">Sends light</label><select id="bLobe"></select></div>
+            <p class="hint measured" id="bMeas" hidden></p>
           </details>
         </div>
+        <button type="button" class="btn" id="measOpen">Measure your screens…</button>
+        <p class="hint" id="measStatus">Typical numbers for each kind of screen until you measure. A sample of the new screen makes it exact.</p>
         <details class="help">
           <summary>What do these mean?</summary>
           <dl>
             <dt>Gain</dt><dd>How much light the screen bounces back to you. A 1.5 screen is 25% brighter than a 1.2 screen (1.5 ÷ 1.2 = 1.25).</dd>
-            <dt>Size</dt><dd>The screen's diagonal in inches. A bigger screen spreads the same light over more area, so it looks dimmer.</dd>
-            <dt>Screen type</dt><dd>Fills in typical numbers for that kind of screen. Open Fine-tune to type in your screen's exact numbers.</dd>
-            <dt>Blocks ambient light</dt><dd>How much lamp and window light the screen keeps off the picture. A plain white screen is 0%. Only matters when ambient light is on.</dd>
-            <dt>Half as bright at</dt><dd>How far to the side you can sit before the picture looks half as bright. 0 means it looks the same from every seat. Only matters when you sit to the side.</dd>
+            <dt>Size and shape</dt><dd>The diagonal in inches, and 16:9 or a 2.39:1 wide screen. A bigger screen spreads the same light over more area, so it looks dimmer. On a wide screen, wide movies fill its width and 16:9 pictures fill its height (the lens is zoomed between them).</dd>
+            <dt>Screen type</dt><dd>Fills in typical numbers for that kind of screen. Open Fine-tune to type in your screen's exact numbers, or measure them.</dd>
+            <dt>Blocks room light</dt><dd>How much lamp and window light the screen keeps off the picture, compared with a plain matte white screen (0%). The numbers for each type are typical. Measuring a sample under your own lights makes it exact.</dd>
+            <dt>Half as bright</dt><dd>How far off you can be, side to side and up and down, before the picture looks half as bright. 0 means it looks the same from everywhere. Fresnel and lenticular screens get dim quickly up and down.</dd>
+            <dt>Sends light</dt><dd>Where the screen aims the light it reflects. Straight out from the screen (Fresnel, lenticular): each part is brightest straight in front of it, so from a seat on the left the left side looks brighter and the right side dimmer. Like a dull mirror (high-gain white, grey ALR): brightest where the projector's mirror image is. Back toward the projector (glass bead). Evenly (matte).</dd>
           </dl>
         </details>
       </section>
@@ -535,7 +575,7 @@ details.extra > summary { font-weight: 500; }
       <section class="panel" aria-labelledby="hRoom">
         <header><h2 id="hRoom">Ambient light</h2></header>
         <div>
-          <label for="ambNum">Lamp or window light hitting your screen</label>
+          <label for="ambNum">Your screen with the projector off and your lights on</label>
           <div class="grid2" style="align-items:center">
             <input type="range" id="ambRange" min="0" max="1000" step="1" aria-label="Ambient light slider">
             <div class="suffix"><input type="number" id="ambNum" min="0" step="any"><span class="u">nits</span></div>
@@ -551,20 +591,25 @@ details.extra > summary { font-weight: 500; }
       <section class="panel" aria-labelledby="hSeat">
         <header><h2 id="hSeat">Where you sit</h2></header>
         <div>
-          <label for="seat">How far to the side you sit: <output id="seatOut" class="ta" style="font-family:var(--font-num)">0° · 0 ft</output></label>
-          <input type="range" id="seat" min="0" max="60" step="1">
+          <div class="seatrow"><label for="seat">Where you sit</label><output id="seatOut" class="ta seatout" for="seat">Middle</output></div>
+          <input type="range" id="seat" min="-20" max="20" step="0.5">
+          <div class="ends" aria-hidden="true"><span>Left</span><span class="mid">Middle</span><span>Right</span></div>
         </div>
         <div>
           <label for="geoDist">How far back you sit (from the screen)</label>
           <div class="suffix" style="max-width:200px"><input type="number" id="geoDist" min="0.5" max="100" step="0.5"><select id="geoDistU" aria-label="Distance unit" style="width:auto;min-width:3.6em;border:0;background:transparent;padding:4px 6px"><option value="ft">ft</option><option value="m">m</option></select></div>
         </div>
-        <p class="hint">0° means straight in front. Sitting to the side makes a screen dimmer, and higher-gain screens get dimmer faster.</p>
+        <p class="hint">Sitting to the side makes a screen dimmer, and higher-gain screens get dimmer faster. Sitting farther back doesn't make a screen dimmer: it only changes the angle to the side seats and to the edges of the screen.</p>
         <details class="help">
           <summary>More detail</summary>
           <label class="check" style="margin-bottom:8px"><input type="checkbox" id="geoOn"> Show which parts of the screen look brighter</label>
-          <div class="grid2" id="geoBox" hidden>
-            <div><label for="geoAspect">Shape</label><select id="geoAspect"><option value="16:9">16:9</option><option value="2.39">2.39:1</option></select></div>
+          <div style="margin-bottom:8px">
+            <label for="eyeUp">Are you sitting or standing?</label>
+            <select id="eyeUp"></select>
+            <p class="hint" style="margin-top:4px">Fresnel and lenticular screens send most of their light out level with seated eyes in the main row, so they look dimmer from higher up, like standing.</p>
           </div>
+          <div><label for="geoProj">Projector</label><select id="geoProj"></select></div>
+          <p class="hint" style="margin-top:4px">Matters for screens that work like a mirror (high-gain white, grey ALR) or a glass bead, and for which screens suit your projector.</p>
         </details>
       </section>
 
@@ -642,6 +687,59 @@ details.extra > summary { font-weight: 500; }
   </form>
 </dialog>
 
+<dialog id="measDlg" aria-labelledby="measTitle" class="wide">
+  <form class="dlg" id="measForm" novalidate>
+    <h3 id="measTitle">Measure your screens</h3>
+    <p class="hint">Your readings replace the typical numbers for each kind of screen. Use the same meter for every reading and fill in only what you can. Everything is saved as you type.</p>
+    <div class="seg full" id="measMode" role="group" aria-label="What you're measuring">
+      <button type="button" data-mode="own">Just my screen</button>
+      <button type="button" data-mode="sample">My screen and a sample of the new one</button>
+    </div>
+
+    <section class="mstep">
+      <h4>1. Brightness from different seats</h4>
+      <ol class="msteps">
+        <li>Put an all-white picture on the screen.</li>
+        <li>Sit in your main seat. Hold the meter at eye level and aim it at the middle of the screen. Type the number in the first row.</li>
+        <li>Move to each of the other seats with the meter and do the same. The meter always aims at the middle of the screen.</li>
+        <li>For each seat, type how far it is to the side of your main seat. For "Standing up", stand in front of your main seat.</li>
+      </ol>
+      <p class="hint smp">With a sample: tape it to the middle of your screen. At each seat, take one reading of the sample and one of your screen right next to it. If your meter sees a wide area (an i1Display does), walk up and hold it a few inches from the sample, still aimed from the direction of that seat, so it only sees the sample.</p>
+      <div class="mtab-wrap"><table class="mtab" id="measSeats"></table></div>
+      <button type="button" class="btn small" id="measAddSeat">Add a seat</button>
+    </section>
+
+    <section class="mstep">
+      <h4>2. Room light</h4>
+      <p class="hint">Turn the projector off and turn on the lights you usually watch with. From your main seat, aim the meter at the middle of the screen<span class="smp"> (and then at the sample)</span>.</p>
+      <div class="grid2">
+        <div><label for="measLA">Your screen</label><div class="suffix"><input type="number" id="measLA" min="0" step="any"><span class="u">nits</span></div></div>
+        <div class="smp"><label for="measLB">The sample</label><div class="suffix"><input type="number" id="measLB" min="0" step="any"><span class="u">nits</span></div></div>
+      </div>
+    </section>
+
+    <details class="mstep help">
+      <summary>3. Screen color (optional, if you use calibration software)</summary>
+      <p class="hint">Some screens tint the picture slightly warmer or cooler, or change color when you sit to the side. If your calibration software (ColourSpace, Calman, HCFR) shows x and y for white, put up an all-white picture and type them in. Skip this otherwise.</p>
+      <div class="mtab-wrap"><table class="mtab" id="measColor">
+        <thead><tr><th scope="col"></th><th scope="col">Your screen x</th><th scope="col">y</th><th scope="col" class="smp">Sample x</th><th scope="col" class="smp">y</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Main seat</th><td><input type="number" id="mcAx" step="any" min="0" max="1" aria-label="Your screen x, main seat"></td><td><input type="number" id="mcAy" step="any" min="0" max="1" aria-label="Your screen y, main seat"></td><td class="smp"><input type="number" id="mcBx" step="any" min="0" max="1" aria-label="Sample x, main seat"></td><td class="smp"><input type="number" id="mcBy" step="any" min="0" max="1" aria-label="Sample y, main seat"></td></tr>
+          <tr><th scope="row" id="mcSideLbl">Side seat</th><td><input type="number" id="msAx" step="any" min="0" max="1" aria-label="Your screen x, side seat"></td><td><input type="number" id="msAy" step="any" min="0" max="1" aria-label="Your screen y, side seat"></td><td class="smp"><input type="number" id="msBx" step="any" min="0" max="1" aria-label="Sample x, side seat"></td><td class="smp"><input type="number" id="msBy" step="any" min="0" max="1" aria-label="Sample y, side seat"></td></tr>
+        </tbody>
+      </table></div>
+      <label class="check smp" style="margin-top:8px"><input type="checkbox" id="measRecal"> I'll recalibrate the projector for the new screen</label>
+    </details>
+
+    <div class="measout" id="measOut" aria-live="polite"></div>
+    <div class="dlg-actions">
+      <button type="button" class="btn" id="measClear">Clear all</button>
+      <button type="button" class="btn" id="measClose">Close</button>
+      <button type="button" class="btn primary" id="measUse" disabled>Use these</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dataDlg" aria-labelledby="dataTitle">
   <div class="dlg">
     <h3 id="dataTitle">Backup &amp; restore</h3>
@@ -675,14 +773,30 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const inClaude = !!(window.claude && typeof window.claude.use === 'function');
 
+// Typical numbers per kind of screen. rej: % of room light kept away compared with matte white; hH/hV: half as bright
+// that many degrees off the lobe, side to side and up and down (the half-gain angle); throw: the projector the screen is
+// made for. All are estimates until measured (Screens → Measure your screens): makers rarely publish half-gain angles.
+// The angles were checked against energy conservation: with these lobes, each screen sends back a plausible share of
+// the light it gets (about 80% for white, 30-50% for dark ALR screens).
 const PRESETS = [
-  { id: 'fresnel12', name: 'Fresnel ALR 1.2', gain: 1.2, rej: 75, half: 40, lobe: 'aimed' },
-  { id: 'fresnel15', name: 'Fresnel ALR 1.5', gain: 1.5, rej: 75, half: 32, lobe: 'aimed' },
-  { id: 'matte10', name: 'Matte white 1.0', gain: 1.0, rej: 0, half: 0, lobe: 'even' },
-  { id: 'white13', name: 'High-gain white 1.3', gain: 1.3, rej: 0, half: 45, lobe: 'mirror' },
-  { id: 'grey08', name: 'Grey ALR 0.8', gain: 0.8, rej: 50, half: 35, lobe: 'mirror' },
+  { id: 'matte10', group: 'plain', name: 'Matte white 1.0', gain: 1.0, lobe: 'even', hH: 0, hV: 0, rej: 0, throw: 'any' },
+  { id: 'grey08m', group: 'plain', name: 'Matte grey 0.8', gain: 0.8, lobe: 'even', hH: 0, hV: 0, rej: 20, throw: 'any' },
+  { id: 'woven09', group: 'plain', name: 'Woven, sound passes through 0.9', gain: 0.9, lobe: 'even', hH: 0, hV: 0, rej: 10, throw: 'any' },
+  { id: 'white13', group: 'plain', name: 'High-gain white 1.3', gain: 1.3, lobe: 'mirror', hH: 60, hV: 60, rej: 10, throw: 'long' },
+  { id: 'grey08', group: 'long', name: 'Grey ALR 0.8', gain: 0.8, lobe: 'mirror', hH: 35, hV: 35, rej: 35, throw: 'long' },
+  { id: 'lentlt10', group: 'long', name: 'Lenticular ALR 1.0', gain: 1.0, lobe: 'straight', hH: 60, hV: 25, rej: 50, throw: 'long' },
+  { id: 'fresnel12', group: 'ust', name: 'Fresnel ALR 1.2', gain: 1.2, lobe: 'straight', hH: 45, hV: 30, rej: 65, throw: 'ust' },
+  { id: 'fresnel15', group: 'ust', name: 'Fresnel ALR 1.5', gain: 1.5, lobe: 'straight', hH: 40, hV: 25, rej: 70, throw: 'ust' },
+  { id: 'lentust08', group: 'ust', name: 'Lenticular ALR 0.8', gain: 0.8, lobe: 'straight', hH: 65, hV: 25, rej: 55, throw: 'ust' },
+  { id: 'bead24', group: 'other', name: 'Glass bead 2.4', gain: 2.4, lobe: 'retro', hH: 25, hV: 25, rej: 25, throw: 'long' },
 ];
-const LOBES = { aimed: 'Toward the seats (Fresnel)', mirror: 'Like a dull mirror (grey, silver)', even: 'Evenly (matte white)' };
+const PRESET_GROUPS = { plain: 'Plain screens', long: 'ALR, for long-throw projectors', ust: 'ALR, for ultra short throw', other: 'Other' };
+const LOBES = { straight: 'Straight out from the screen (Fresnel, lenticular)', mirror: 'Like a dull mirror (high-gain white, grey ALR)', even: 'Evenly (matte)', retro: 'Back toward the projector (glass bead)' };
+const THROWS = { ust: 'ultra short throw', long: 'long-throw', any: 'any' };
+const PROJ = { ust: 'Ultra short throw, below the screen', ceiling: 'Long-throw, on the ceiling', shelf: 'Long-throw, on a shelf behind the seats', table: 'Long-throw, on a table in front of the seats' };
+// Screen settings from a preset (everything that isn't measured).
+const fromPreset = p => ({ preset: p.id, gain: p.gain, lobe: p.lobe, hH: p.hH, pH: 2, hV: p.hV, pV: 2, rej: p.rej, throw: p.throw,
+  ambRatio: null, color: null, gainMeasured: false, angMeasured: false });
 
 function exampleProfiles() {
   const base = { iris: 'fixed', blackOpen: null, tone: 'bt1886', gamma: 2.4, table: [], ansi: null, notes: '', example: true };
@@ -697,10 +811,11 @@ function defaults() {
   const p = PRESETS;
   return {
     v: 1, units: 'nits', profiles: exampleProfiles(), profA: 'ex3', profB: 'ex3', linked: true,
-    screenA: { preset: p[0].id, name: p[0].name, gain: p[0].gain, rej: p[0].rej, half: p[0].half, lobe: p[0].lobe, size: 120 },
-    screenB: { preset: p[1].id, name: p[1].name, gain: p[1].gain, rej: p[1].rej, half: p[1].half, lobe: p[1].lobe, size: 120 },
+    screenA: { ...fromPreset(p.find(x => x.id === 'fresnel12')), name: 'Fresnel ALR 1.2', size: 120, aspect: '16:9', recal: true },
+    screenB: { ...fromPreset(p.find(x => x.id === 'fresnel15')), name: 'Fresnel ALR 1.5', size: 120, aspect: '16:9', recal: true },
     ambient: 0, cct: 6500, seat: 0,
-    geo: { on: false, diag: 120, aspect: '16:9', dist: 12, distUnit: 'ft' },
+    geo: { on: true, map2: true, dist: 12, distUnit: 'ft', proj: 'ust', eyeUp: 0, side: 0 },
+    meas: null,
     display: { mode: 'auto', monitor: 200 },
     view: 'split', zoom: 'fit', split: 0.5, scene: 'street',
     content: 'sdr', hdr: { tm: 'dynamic', bMode: 'retuned', target: null },
@@ -723,15 +838,42 @@ function sanitizeProfile(p) {
   if (!(o.ansi > 1)) o.ansi = null;
   return o;
 }
-function sanitizeScreen(s, d) {
+function sanitizeScreen(s, d, legacyAspect) {
   s = s || {};
   const n = (v, def) => (v === null || v === undefined || v === '' || !isFinite(+v)) ? def : +v;
+  const P = PRESETS.find(p => p.id === s.preset);
+  const base = P ? fromPreset(P) : d;
+  // Saved before 2026-10-14: one "half" angle. Briefly saved on 2026-10-14: rejection by direction (averaged here).
+  const half = n(s.half, null);
+  const rej = s.rej && typeof s.rej === 'object' ? (n(s.rej.up, 0) + n(s.rej.side, 0) + n(s.rej.front, 0)) / 3 : n(s.rej, base.rej);
+  const xy = a => Array.isArray(a) && a.length === 2 && a[0] > 0.05 && a[0] < 0.8 && a[1] > 0.05 && a[1] < 0.9 ? [+a[0], +a[1]] : null;
+  const c = s.color && xy(s.color.c) ? { c: xy(s.color.c), s: xy(s.color.s), ang: clamp(n(s.color.ang, 30), 1, 80) } : null;
   return {
     preset: typeof s.preset === 'string' ? s.preset : d.preset, name: String(s.name ?? d.name).slice(0, 40),
-    gain: clamp(n(s.gain, d.gain), 0.1, 5), rej: clamp(n(s.rej, d.rej), 0, 95), half: clamp(n(s.half, d.half), 0, 90),
-    size: clamp(n(s.size, d.size), 40, 400),
-    lobe: LOBES[s.lobe] ? s.lobe : d.lobe,
-    gainMeasured: !!s.gainMeasured, rejMeasured: !!s.rejMeasured,
+    gain: clamp(n(s.gain, d.gain), 0.1, 5), size: clamp(n(s.size, d.size), 40, 400),
+    aspect: s.aspect === '2.39' || s.aspect === '16:9' ? s.aspect : legacyAspect === '2.39' ? '2.39' : '16:9',
+    lobe: s.lobe === 'aimed' ? 'straight' : LOBES[s.lobe] ? s.lobe : base.lobe,
+    hH: clamp(n(s.hH, half ?? base.hH), 0, 90), pH: clamp(n(s.pH, 2), 1, 6),
+    hV: clamp(n(s.hV, half !== null && !P ? half : base.hV), 0, 90), pV: clamp(n(s.pV, 2), 1, 6),
+    rej: clamp(Math.round(rej), 0, 95),
+    throw: THROWS[s.throw] ? s.throw : base.throw,
+    ambRatio: n(s.ambRatio, 0) > 0 ? clamp(+s.ambRatio, 0.01, 10) : null,
+    color: c, recal: s.recal !== false,
+    gainMeasured: !!s.gainMeasured, angMeasured: !!s.angMeasured,
+  };
+}
+const MAX_SEATS = 8;
+function sanitizeMeas(m) {
+  if (!m || typeof m !== 'object') return null;
+  const n = v => (v === null || v === undefined || v === '' || !isFinite(+v)) ? null : +v;
+  const xy = a => Array.isArray(a) ? [n(a[0]), n(a[1])] : [null, null];
+  return {
+    mode: m.mode === 'sample' ? 'sample' : 'own',
+    seats: (Array.isArray(m.seats) ? m.seats : []).slice(0, MAX_SEATS).map((r, i) => ({ name: String(r.name || 'Seat ' + (i + 1)).slice(0, 30),
+      side: i === 0 ? 0 : clamp(n(r.side) ?? 0, -30, 30), up: i === 0 ? 0 : clamp(n(r.up) ?? 0, -3, 3), a: n(r.a), b: n(r.b) })),
+    light: { a: n(m.light && m.light.a), b: n(m.light && m.light.b) },
+    color: { ca: xy(m.color && m.color.ca), cb: xy(m.color && m.color.cb), sa: xy(m.color && m.color.sa), sb: xy(m.color && m.color.sb) },
+    recal: m.recal !== false,
   };
 }
 function applyState(o) {
@@ -747,13 +889,21 @@ function applyState(o) {
   n.linked = o.linked !== false;
   n.profA = has(o.profA) ? o.profA : n.profiles[Math.min(1, n.profiles.length - 1)].id;
   n.profB = has(o.profB) ? o.profB : n.profA;
-  n.screenA = sanitizeScreen(o.screenA, d.screenA);
-  n.screenB = sanitizeScreen(o.screenB, d.screenB);
+  const g = o.geo || {};
+  n.screenA = sanitizeScreen(o.screenA, d.screenA, g.aspect);
+  n.screenB = sanitizeScreen(o.screenB, d.screenB, g.aspect);
+  // Before 2026-10-14 a sample's room-light reading was stored as B's single "blocks" number.
+  const oB = o.screenB || {}, oA = o.screenA || {};
+  if (oB.rejMeasured && typeof oB.rej === 'number' && !n.screenB.ambRatio) n.screenB.ambRatio = clamp((1 - clamp(oB.rej, 0, 95) / 100) / (1 - clamp(+oA.rej || 0, 0, 95) / 100), 0.01, 10);
   n.ambient = clamp(+o.ambient || 0, 0, 1000);
   n.cct = 6500;
-  n.seat = clamp(+o.seat || 0, 0, 60);
-  const g = o.geo || {};
-  n.geo = { on: !!g.on, diag: clamp(+g.diag || 120, 40, 400), aspect: g.aspect === '2.39' ? '2.39' : '16:9', dist: clamp(+g.dist || 12, 0.5, 100), distUnit: g.distUnit === 'm' ? 'm' : 'ft' };
+  // "Show which parts of the screen look brighter" became the default on 2026-10-14 (map2); older saves get it on once.
+  n.geo = { on: g.map2 ? !!g.on : true, map2: true, dist: clamp(+g.dist || 12, 0.5, 100), distUnit: g.distUnit === 'm' ? 'm' : 'ft', proj: PROJ[g.proj] ? g.proj : 'ust', eyeUp: clamp(+g.eyeUp || 0, 0, 1), side: 0 };
+  // The seat is stored as how far to the side (meters); saved before 2026-10-14 as an angle.
+  const Dm = n.geo.distUnit === 'm' ? n.geo.dist : n.geo.dist * 0.3048;
+  n.geo.side = clamp(isFinite(+g.side) && g.side !== null && g.side !== undefined ? +g.side : Dm * Math.tan(clamp(+o.seat || 0, 0, 60) * Math.PI / 180), -10, 10);
+  n.seat = Math.atan2(n.geo.side, Dm) * 180 / Math.PI;
+  n.meas = sanitizeMeas(o.meas);
   const dp = o.display || {};
   n.display = { mode: dp.mode === 'fixed' ? 'fixed' : 'auto', monitor: clamp(+dp.monitor || 200, 1, 10000) };
   n.view = ['split', 'side', 'flip'].includes(o.view) ? o.view : 'split';
@@ -795,7 +945,7 @@ const LS_KEY = 'screen-gain-sim.v1';
 const store = { ref: null, readonly: false, chain: Promise.resolve(), t: 0, dirty: false };
 function saveObj() {
   return { v: 1, units: S.units, profiles: S.profiles, profA: S.profA, profB: S.profB, linked: S.linked, screenA: S.screenA, screenB: S.screenB,
-    ambient: S.ambient, cct: S.cct, seat: S.seat, geo: S.geo, display: S.display, view: S.view, zoom: S.zoom, split: S.split, content: S.content, hdr: S.hdr,
+    ambient: S.ambient, cct: S.cct, seat: S.seat, geo: S.geo, meas: S.meas, display: S.display, view: S.view, zoom: S.zoom, split: S.split, content: S.content, hdr: S.hdr,
     scene: S.scene.startsWith('u_') ? 'street' : S.scene };
 }
 function loadLocal() { try { const t = localStorage.getItem(LS_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
@@ -983,35 +1133,176 @@ const SGS = (() => {
     return lut;
   }
 
-  // ---- screens and seating. st = { screenA, screenB, ambient, seat, geo }
-  // Same projector light on a bigger screen spreads over more area: luminance ∝ gain ÷ area.
-  const screenFactor = (st, scr) => scr.gain / st.screenA.gain * (st.screenA.size / scr.size) ** 2;
-  const falloff = (scr, deg) => scr.half > 0 ? Math.pow(0.5, (deg / scr.half) ** 2) : 1;
-  function screenWidthM(st, scr) { const d = scr.size * 0.0254, ar = st.geo.aspect === '2.39' ? 2.39 : 16 / 9; return d * ar / Math.sqrt(ar * ar + 1); }
+  // ---- screens, room and seats. st = { screenA, screenB, ambient, seat, geo }
+  // Meters, with the middle of the screen at the origin: x to the right, y up, z out toward the seats.
+  // The readings were taken on screen A from the main seat (straight in front, eyes level with the middle of the
+  // screen, at the given distance), pointing at the middle of the screen.
+  const RAD = Math.PI / 180;
   const distM = st => st.geo.distUnit === 'm' ? st.geo.dist : st.geo.dist * 0.3048;
-  // Brightness factor per image column, relative to what was measured (screen A, head-on, center).
-  function gainRow(st, scr, tw) {
-    const f = screenFactor(st, scr), g = new Float32Array(tw);
-    if (!st.geo.on) { g.fill(falloff(scr, st.seat) * f); return g; }
-    const Wd = screenWidthM(st, scr), D = distM(st), s = D * Math.tan(st.seat * Math.PI / 180);
-    for (let x = 0; x < tw; x++) {
-      const px = ((x + 0.5) / tw - 0.5) * Wd;
-      const av = Math.atan2(s - px, D);                      // this point → your eyes
-      const al = scr.lobe === 'mirror' ? Math.atan2(px, D)   // mirror of a projector near the seats
-        : Math.atan2(-px, D);                                 // aimed at the center seat (Fresnel, matte)
-      g[x] = falloff(scr, Math.abs(av - al) * 180 / Math.PI) * f;
+  function screenWH(scr) { const ar = scr.aspect === '2.39' ? 2.39 : 16 / 9, W = scr.size * 0.0254 * ar / Math.sqrt(ar * ar + 1); return [W, W / ar]; }
+  // A picture of aspect par shown as large as it fits on the screen (wi × hi), and the width of the projector's
+  // 16:9 frame around it (fw). The frame is zoomed so the picture fills the screen's width or height; with a wide
+  // screen, 16:9 pictures use its height and wide movies its width. No anamorphic lens.
+  function pictureOn(scr, par) {
+    const [W, H] = screenWH(scr), wi = Math.min(W, H * par), hi = wi / par;
+    return { W, H, wi, hi, fw: par >= 16 / 9 ? wi : hi * 16 / 9 };
+  }
+  // Typical lens positions for each room layout.
+  function projectorAt(st, scr) {
+    const [W, H] = screenWH(scr), D = distM(st);
+    switch (st.geo.proj) {
+      case 'ceiling': return [0, H / 2, Math.max(1.5 * W, 1)];   // throw ratio about 1.5, lens level with the top edge
+      case 'shelf': return [0, H / 2, D + 0.6];                   // behind the seats
+      case 'table': return [0, -H / 2, Math.max(D - 0.8, 0.5)];  // in front of the seats, level with the bottom edge
+      default: return [0, -H / 2 - 0.3, 0.4];                     // ultra short throw, just below the screen
     }
-    return g;
+  }
+  const mainSeat = st => [0, 0, distM(st)];
+  const viewSeat = st => { const D = distM(st); return [D * Math.tan(st.seat * RAD), st.geo.eyeUp || 0, D]; };
+  // Angle (degrees) between the direction to the eye and the center of the screen's reflection lobe, at screen
+  // coordinate p along one axis (0 = horizontal, 1 = vertical). Lobe centers: 'straight' straight out from every part
+  // of the screen (a Fresnel's rings work like a curved mirror with the projector at its focus, which sends parallel
+  // light out; lenticular screens too; matte screens have no lobe), 'mirror' the mirror image of the projector
+  // (angular-reflective: high-gain white, grey ALR), 'retro' back at the projector (glass bead).
+  // Each part depends only on its own axis, which makes the brightness map separable into columns and rows.
+  // (Until 2026-10-14 Fresnel and lenticular lobes were aimed at the main seat. That predicted the far side of the
+  // screen to look brighter from a side seat; the owner's Fresnel 1.5 shows the near side brighter, as this does.)
+  function lobeD(lobe, p, eye, proj, axis) {
+    const o = Math.atan2(eye[axis] - p, eye[2]);
+    const c = lobe === 'mirror' ? -Math.atan2(proj[axis] - p, proj[2])
+      : lobe === 'retro' ? Math.atan2(proj[axis] - p, proj[2])
+      : 0;
+    return (o - c) / RAD;
+  }
+  // Brightness along one axis relative to the lobe center: half at h degrees; p shapes it (2 = bell curve,
+  // higher = flatter top and steeper edge). h = 0: no change with angle.
+  const axisF = (h, p, d) => h > 0 ? Math.pow(0.5, Math.pow(Math.abs(d) / h, p)) : 1;
+  // Lobe brightness at the middle of the screen, seen from eye.
+  function lobeAt(st, scr, eye) {
+    const proj = projectorAt(st, scr);
+    return axisF(scr.hH, scr.pH, lobeD(scr.lobe, 0, eye, proj, 0)) * axisF(scr.hV, scr.pV, lobeD(scr.lobe, 0, eye, proj, 1));
+  }
+  // Screen A as measured: its lobe brightness at the main seat (1 for straight and matte screens). Held at 5% or more
+  // so a screen that sends almost nothing to the main seat can't blow up the other screen's numbers.
+  const refF = (st, scr) => Math.max(lobeAt(st, scr, mainSeat(st)), 0.05);
+  // Share of brightness kept at the middle of the screen from your seat, compared with the main seat.
+  const seatKeeps = (st, scr) => lobeAt(st, scr, viewSeat(st)) / Math.max(lobeAt(st, scr, mainSeat(st)), 1e-12);
+
+  // Room light. rej = % of the room light a matte white screen would send you that this screen keeps away.
+  const roomShare = scr => 1 - cl(scr.rej, 0, 95) / 100;
+  // Room light on a screen (nits) from the reading on screen A. For B, a ratio measured with a sample under your own
+  // lights replaces the typical numbers.
+  function ambientOn(st, side) {
+    if (side === 'A') return st.ambient;
+    const B = st.screenB;
+    return st.ambient * (B.ambRatio > 0 ? B.ambRatio : roomShare(B) / roomShare(st.screenA));
+  }
+
+  // Screen color. White measured (CIE x, y) on each screen; channel factors in the picture's RGB space relative to
+  // screen A at the main seat (what the projector is calibrated on), scaled so luminance is unchanged.
+  const xyRGB = (xy, space) => mul3(inv3(TO_XYZ[space]), [xy[0] / xy[1], 1, (1 - xy[0] - xy[1]) / xy[1]]);
+  function tintOf(xy, ref, space) {
+    const a = xyRGB(xy, space), b = xyRGB(ref, space), k = a.map((v, c) => v / b[c]), lw = TO_XYZ[space][1];
+    const Y = lw[0] * k[0] + lw[1] * k[1] + lw[2] * k[2];
+    return k.map(v => v / Y);
+  }
+  // k0: color in the middle from the main seat; k1: at horizontal lobe angle ang (a side seat). In between, the
+  // log of each factor changes with the square of the angle; beyond ang it stays at k1.
+  function colorModel(st, side, space) {
+    const A = st.screenA.color, scr = side === 'A' ? st.screenA : st.screenB, C = scr.color;
+    if (!A || !A.c || !C || !C.c) return null;
+    const k0 = tintOf(C.c, A.c, space), k1 = C.s && C.ang > 0 ? tintOf(C.s, A.c, space) : k0;
+    return { k0, k1, ang: C.ang > 0 ? C.ang : 1, recal: side === 'B' && scr.recal !== false };
+  }
+  function colorAt(cm, d) {
+    const t = Math.min((d / cm.ang) ** 2, 1);
+    return cm.k0.map((v, c) => v * Math.pow(cm.k1[c] / v, t));
+  }
+  // Color factor actually applied to projector light. Recalibrating for screen B neutralizes its middle (each channel
+  // turned down to match the weakest), which costs min(k0) of its brightness; the change with angle stays.
+  const colorGain = (cm, d) => { const t = colorAt(cm, d); return cm.recal ? t.map((v, c) => v / cm.k0[c]) : t; };
+  const recalCost = cm => cm && cm.recal ? Math.min(cm.k0[0], cm.k0[1], cm.k0[2]) : 1;
+
+  // Everything that sets a screen's brightness relative to the readings (screen A, main seat, middle).
+  function screenPart(st, side, space, par) {
+    const scr = side === 'A' ? st.screenA : st.screenB, A = st.screenA;
+    const pic = pictureOn(scr, par), cm = colorModel(st, side, space);
+    // gain ÷ area of the projector's frame, relative to screen A as measured from the main seat
+    const f = scr.gain / A.gain * (pictureOn(A, par).fw / pic.fw) ** 2 / refF(st, A) * recalCost(cm);
+    return { scr, pic, cm, f, proj: projectorAt(st, scr), main: mainSeat(st), eye: viewSeat(st) };
+  }
+  // Per channel, at the middle of the screen, seen from eye.
+  function middle(sp, eye) {
+    const { scr, proj, cm, f } = sp, dh = lobeD(scr.lobe, 0, eye, proj, 0);
+    const a = f * axisF(scr.hH, scr.pH, dh) * axisF(scr.hV, scr.pV, lobeD(scr.lobe, 0, eye, proj, 1));
+    return cm ? colorGain(cm, dh).map(t => a * t) : [a, a, a];
+  }
+  // Luminance in the middle from the main seat, relative to the readings (what "Set up for B" calibrates to).
+  function screenFactor(st, side, par = 16 / 9, space = 'bt709') {
+    const sp = screenPart(st, side, space, par), m = middle(sp, sp.main), lw = TO_XYZ[space][1];
+    return lw[0] * m[0] + lw[1] * m[1] + lw[2] * m[2];
+  }
+  // Brightness factor per channel for each image column (gx, 3 per column) and per row (gy). Their product is the
+  // light at that pixel relative to the readings. Without "show which parts", every pixel gets the middle's value.
+  function screenMaps(st, side, tw, th, space, par) {
+    const sp = screenPart(st, side, space, par), { scr, pic, cm, f, proj, eye } = sp, on = st.geo.on;
+    const gx = new Float32Array(tw * 3), gy = new Float32Array(th);
+    for (let x = 0; x < tw; x++) {
+      const dh = lobeD(scr.lobe, on ? ((x + 0.5) / tw - 0.5) * pic.wi : 0, eye, proj, 0), a = f * axisF(scr.hH, scr.pH, dh);
+      const t = cm ? colorGain(cm, dh) : null;
+      for (let c = 0; c < 3; c++) gx[x * 3 + c] = t ? a * t[c] : a;
+    }
+    for (let y = 0; y < th; y++) gy[y] = axisF(scr.hV, scr.pV, lobeD(scr.lobe, on ? (0.5 - (y + 0.5) / th) * pic.hi : 0, eye, proj, 1));
+    return { gx, gy, cm, center: middle(sp, eye), head: middle(sp, sp.main) };
+  }
+  // Fit a screen's lobe to readings of the middle of the screen from several seats: rows = [{ side, up, L }] in
+  // meters and nits, one of them the main seat (0, 0). Finds the half angle (and shape, with two or more different
+  // angles) on each axis the seats cover, by least squares on log brightness relative to the main seat.
+  function fitLobe(st, scr, rows) {
+    const ok = rows.filter(r => r.L > 0), r0 = ok.find(r => Math.abs(r.side) < 1e-9 && Math.abs(r.up) < 1e-9);
+    if (!r0 || ok.length < 2) return null;
+    const D = distM(st), proj = projectorAt(st, scr);
+    const pts = ok.map(r => { const eye = [r.side, r.up, D]; return { dh: lobeD(scr.lobe, 0, eye, proj, 0), dv: lobeD(scr.lobe, 0, eye, proj, 1), y: Math.log(r.L / r0.L), r }; });
+    const p0 = pts[ok.indexOf(r0)];
+    const angles = k => new Set(pts.filter(q => Math.abs(Math.abs(q[k]) - Math.abs(p0[k])) > 1).map(q => Math.round(Math.abs(q[k])))).size;
+    const nH = angles('dh'), nV = angles('dv');
+    if (!nH && !nV) return null;
+    const lnF = (h, p, d) => h > 0 ? -Math.LN2 * Math.pow(Math.abs(d) / h, p) : 0;
+    const pred = (Q, q) => lnF(Q.hH, Q.pH, q.dh) + lnF(Q.hV, Q.pV, q.dv) - lnF(Q.hH, Q.pH, p0.dh) - lnF(Q.hV, Q.pV, p0.dv);
+    const sse = Q => { let s = 0; for (const q of pts) { const e = q.y - pred(Q, q); s += e * e; } return s; };
+    const P = { hH: scr.hH, pH: nH ? 2 : scr.pH, hV: scr.hV, pV: nV ? 2 : scr.pV };
+    const fitAxis = (hk, pk, n) => {
+      if (!n) return;
+      const pFree = n >= 2;
+      let best = { e: sse({ ...P, [hk]: 0 }), h: 0, p: P[pk] };
+      const scan = (h0, h1, hs, p0_, p1, ps) => {
+        for (let h = h0; h <= h1 + 1e-9; h += hs) for (let p = p0_; p <= p1 + 1e-9; p += ps) {
+          if (h < 1) continue;
+          const e = sse({ ...P, [hk]: h, [pk]: p });
+          if (e < best.e - 1e-15) best = { e, h, p };
+        }
+      };
+      if (pFree) scan(2, 120, 0.5, 1.2, 4, 0.1); else scan(2, 120, 0.5, 2, 2, 1);
+      if (best.h > 0) { if (pFree) scan(best.h - 0.5, best.h + 0.5, 0.02, best.p - 0.1, best.p + 0.1, 0.005); else scan(best.h - 0.5, best.h + 0.5, 0.01, 2, 2, 1); }
+      P[hk] = best.h; P[pk] = best.p;
+    };
+    for (let it = 0; it < 4; it++) { fitAxis('hH', 'pH', nH); fitAxis('hV', 'pV', nV); }
+    let err = 0;
+    for (const q of pts) err = Math.max(err, Math.abs(Math.exp(pred(P, q) - q.y) - 1));
+    return { ...P, h: nH > 0, v: nV > 0, err, n: pts.length };
   }
   const isDyn = p => p.iris === 'dynamic' && p.blackOpen > p.black;
   // Everything one side needs to turn normalized light into nits on the screen.
-  // stats = { mean: [3], peak } of the normalized-light image; lw = luminance weights of its RGB space.
-  function simSide(st, side, prof, stats, tw, lw) {
-    const scr = side === 'A' ? st.screenA : st.screenB;
-    const gf = gainRow(st, scr, tw);
-    let gMax = 0, gSum = 0;
-    for (let i = 0; i < tw; i++) { gSum += gf[i]; if (gf[i] > gMax) gMax = gf[i]; }
-    const gMean = gSum / tw, gC = gf[tw >> 1];
+  // stats = { mean: [3], peak } of the normalized-light image; o = { tw, th, space, par } (preview size, the picture's
+  // RGB space and its aspect ratio).
+  function simSide(st, side, prof, stats, o) {
+    const lw = TO_XYZ[o.space][1], m = screenMaps(st, side, o.tw, o.th, o.space, o.par), { gx, gy } = m;
+    const gMax = [0, 0, 0], gMean = [0, 0, 0];
+    let yMax = 0, ySum = 0;
+    for (let y = 0; y < o.th; y++) { ySum += gy[y]; if (gy[y] > yMax) yMax = gy[y]; }
+    for (let x = 0; x < o.tw; x++) for (let c = 0; c < 3; c++) { const v = gx[x * 3 + c]; gMean[c] += v; if (v > gMax[c]) gMax[c] = v; }
+    for (let c = 0; c < 3; c++) { gMean[c] *= ySum / (o.tw * o.th); gMax[c] *= yMax; }
+    const gC = lw[0] * m.center[0] + lw[1] * m.center[1] + lw[2] * m.center[2];
     const dyn = isDyn(prof);
     let Bf, span, irisS = 1;
     // Dynamic iris: closes as far as the frame's brightest part allows, with brightness compensation.
@@ -1021,30 +1312,29 @@ const SGS = (() => {
     const veil = [0, 0, 0], Bn = curveBlack(prof);
     if (prof.ansi > 1 && prof.ansi < prof.white / Bn) {
       const V = (prof.white - prof.ansi * Bn) / (prof.ansi - 1), kv = V / ((prof.white + Bn) / 2);
-      for (let c = 0; c < 3; c++) veil[c] = kv * (Bf + span * stats.mean[c]) * gMean;
+      for (let c = 0; c < 3; c++) veil[c] = kv * (Bf + span * stats.mean[c]) * gMean[c];
     }
-    // Ambient light as read on screen A; screen B reflects it in proportion to (1 − rejection).
-    const rejA = cl(st.screenA.rej, 0, 95) / 100, rejS = cl(scr.rej, 0, 95) / 100;
-    const ambN = st.ambient * (1 - rejS) / (1 - rejA);
-    const amb = [ambN, ambN, ambN]; // neutral (D65) room light
-    let peakOut = 0;
-    for (let c = 0; c < 3; c++) peakOut = Math.max(peakOut, (Bf + span) * gMax + veil[c] + amb[c]);
-    const f = screenFactor(st, scr);
-    let peakRef = 0; // head-on, so sitting to the side visibly dims the picture
-    for (let c = 0; c < 3; c++) peakRef = Math.max(peakRef, (Bf + span) * f + veil[c] + amb[c]);
+    // Room light takes the screen's own color: recalibrating the projector doesn't change it.
+    const ambN = ambientOn(st, side), ta = m.cm ? m.cm.k0 : [1, 1, 1];
+    const amb = ta.map(t => ambN * t);
+    let peakOut = 0, peakRef = 0; // peakRef: middle from the main seat, so sitting elsewhere visibly dims the picture
+    for (let c = 0; c < 3; c++) {
+      peakOut = Math.max(peakOut, (Bf + span) * gMax[c] + veil[c] + amb[c]);
+      peakRef = Math.max(peakRef, (Bf + span) * m.head[c] + veil[c] + amb[c]);
+    }
     const veilY = lw[0] * veil[0] + lw[1] * veil[1] + lw[2] * veil[2];
-    return { side, prof, scr, gf, gC, gMax, Bf, span, irisS, dyn, veil, veilY, amb, ambN, peakOut, peakRef, lw,
-      whiteC: prof.white * gC, blackC: prof.black * gC, floorC: Bf * gC + veilY + ambN };
+    return { side, prof, scr: side === 'A' ? st.screenA : st.screenB, gx, gy, gC, center: m.center, head: m.head, gMax, gMean, Bf, span, irisS, dyn,
+      veil, veilY, amb, ambN, peakOut, peakRef, lw, whiteC: prof.white * gC, blackC: prof.black * gC, floorC: Bf * gC + veilY + ambN };
   }
-  // Light on the screen (nits, per channel) for normalized light n3 in image column x.
-  function lightAt(sim, n3, x) {
-    const g = sim.gf[x];
-    return [0, 1, 2].map(c => (sim.Bf + sim.span * n3[c]) * g + sim.veil[c] + sim.amb[c]);
+  // Light on the screen (nits, per channel) for normalized light n3 at image column x, row y.
+  function lightAt(sim, n3, x, y) {
+    const g = sim.gy[y];
+    return [0, 1, 2].map(c => (sim.Bf + sim.span * n3[c]) * sim.gx[x * 3 + c] * g + sim.veil[c] + sim.amb[c]);
   }
   // Monitor code value (0..255, before dither) for that light, given the display scale k = 1 / nits at monitor white
   // and an optional matrix from the image's RGB space to the canvas's.
-  function displayCode(sim, n3, x, k, M) {
-    let v = lightAt(sim, n3, x).map(l => l * k);
+  function displayCode(sim, n3, x, y, k, M) {
+    let v = lightAt(sim, n3, x, y).map(l => l * k);
     if (M) v = mul3(M, v);
     return v.map(l => 255 * srgbEncode(cl(l, 0, 1)));
   }
@@ -1187,22 +1477,33 @@ const SGS = (() => {
 
   return { cl, inv3, mul33, mul3, D65, PRIMARIES, rgbToXYZ, TO_XYZ, convert, lumaWeights, srgbEncode, PQ, pqToNits, nitsToPq, eetf, toneLUT,
     boxWeights, resampleF3, fractionBelow, sdrImage, hdrSourceStats, hdrImage, CICP_PRIMARIES, pqCodesToNits, endpointsFromRows,
-    GRADE, gradeNits, curveBlack, curveKey, tableLUT, responseLUT, screenFactor, falloff, screenWidthM, distM, gainRow, isDyn, simSide,
-    lightAt, displayCode, sdrPixelToHdr, hdrPixelToN };
+    GRADE, gradeNits, curveBlack, curveKey, tableLUT, responseLUT, distM, screenWH, pictureOn, projectorAt, mainSeat, viewSeat, lobeD, axisF,
+    lobeAt, refF, seatKeeps, roomShare, ambientOn, xyRGB, tintOf, colorModel, colorAt, colorGain, recalCost, screenFactor, screenMaps, fitLobe,
+    isDyn, simSide, lightAt, displayCode, sdrPixelToHdr, hdrPixelToN };
 })();
 /* SGS-ENGINE-END */
 
 // ---------- engine ↔ app
 const LW709 = SGS.lumaWeights('bt709'), LW2020 = SGS.lumaWeights('bt2020');
-const tableLUT = SGS.tableLUT, toneKey = SGS.curveKey, isDyn = SGS.isDyn, falloff = SGS.falloff;
+const tableLUT = SGS.tableLUT, toneKey = SGS.curveKey, isDyn = SGS.isDyn;
 const lutCache = new Map();
 function nLUT(p) { const k = toneKey(p); let l = lutCache.get(k); if (!l) { l = SGS.responseLUT(p); lutCache.set(k, l); } return l; }
 const profById = id => S.profiles.find(p => p.id === id) || S.profiles[0];
 const profileFor = side => profById(side === 'A' || S.linked ? S.profA : S.profB);
-// The same projector light spread over a bigger screen: brightness scales with (A size ÷ B size)².
-const areaFactor = scr => (S.screenA.size / scr.size) ** 2;
+// The same projector light spread over a bigger frame: brightness scales with (A frame width ÷ B frame width)².
+// The frame is the projector's 16:9 picture area, set by the screen's size and shape and the picture's shape.
+const areaFactor = (scr, par = 16 / 9) => (SGS.pictureOn(S.screenA, par).fw / SGS.pictureOn(scr, par).fw) ** 2;
 // Sideways distance from the screen's center line at your seat: distance back × tan(angle).
-function sideText() { const off = S.geo.dist * Math.tan(S.seat * Math.PI / 180); return `${S.seat}° · ${off < 0.05 ? '0' : off < 10 ? off.toFixed(1) : Math.round(off)} ${S.geo.distUnit}`; }
+// Seat position for display: "Middle", or "4 ft left (18°)". Negative side = left of the screen's middle.
+// Always one decimal, so the readout keeps a steady length while you drag.
+function sideText() { const off = mToU(S.geo.side); return Math.abs(off) < 0.05 ? 'Middle' : `${Math.abs(off).toFixed(1)} ${S.geo.distUnit} ${off < 0 ? 'left' : 'right'} (${Math.round(Math.abs(S.seat))}°)`; }
+// The seat angle the math uses, from how far to the side and how far back you sit.
+function seatFromSide() { S.seat = Math.atan2(S.geo.side, SGS.distM(S)) * 180 / Math.PI; }
+const EYES = [[0, 'Sitting in the main row'], [1, 'Back row on a riser, about 1 ft higher'], [2, 'Standing up, about 2 ft higher']];
+// Lengths in meters shown in the chosen unit.
+const lenU = () => S.geo.distUnit;
+const mToU = m => S.geo.distUnit === 'm' ? m : m / 0.3048, uToM = v => S.geo.distUnit === 'm' ? v : v * 0.3048;
+function lenText(m) { const v = mToU(m); return `${Math.abs(v) < 0.05 ? '0' : (v > 0 ? '+' : '−') + Number(Math.abs(v).toFixed(1))} ${lenU()}`; }
 
 // ---------- pictures → normalized projector light (see SGS.sdrImage / SGS.hdrImage)
 const resampleF3 = SGS.resampleF3;
@@ -1251,9 +1552,9 @@ function getHdrN(base, srcMax, target, tw, th) {
   const key = base.key + '|' + srcMax.toFixed(2) + '|' + target.toFixed(3) + '|' + tw + 'x' + th;
   return cacheGet(hdrNCache, key) || cachePut(hdrNCache, key, { key, ...SGS.hdrImage(base.src.data, base.src.w, base.src.h, base, srcMax, target, tw, th, LW2020) }, 4);
 }
-function tmTarget(side, prof) {
+function tmTarget(side, prof, par) {
   const base = S.hdr.target > 0 ? S.hdr.target : prof.white;
-  return side === 'B' && S.hdr.bMode === 'retuned' ? base * SGS.screenFactor(S, S.screenB) : base;
+  return side === 'B' && S.hdr.bMode === 'retuned' ? base * SGS.screenFactor(S, 'B', par, 'bt2020') : base;
 }
 function hdrSourceMax(base) { return S.hdr.tm === 'static4000' ? 4000 : S.hdr.tm === 'static1000' ? 1000 : base.p999; }
 
@@ -1272,16 +1573,15 @@ function paint(cv, ctx, nE, sim, k, M) {
   const w = nE.w, h = nE.h;
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; cv._id = null; }
   if (!cv._id) { try { cv._id = ctx.createImageData(w, h, { colorSpace: OUT.space }); } catch (e) { cv._id = ctx.createImageData(w, h); } }
-  const out = cv._id.data, N = nE.data, gf = sim.gf, lw = sim.lw;
+  const out = cv._id.data, N = nE.data, gx = sim.gx, gy = sim.gy, lw = sim.lw;
   const Bk = sim.Bf * k, Sk = sim.span * k;
   const a0 = (sim.veil[0] + sim.amb[0]) * k, a1 = (sim.veil[1] + sim.amb[1]) * k, a2 = (sim.veil[2] + sim.amb[2]) * k;
   const m = M ? M.flat() : null;
   let sumY = 0, clip = 0;
   for (let y = 0, i = 0, o = 0; y < h; y++) {
-    const drow = (y & 63) << 6;
-    for (let x = 0; x < w; x++, i += 3, o += 4) {
-      const g = gf[x];
-      const pr = (Bk + Sk * N[i]) * g, pg = (Bk + Sk * N[i + 1]) * g, pb = (Bk + Sk * N[i + 2]) * g;
+    const drow = (y & 63) << 6, gr = gy[y];
+    for (let x = 0, j = 0; x < w; x++, i += 3, o += 4, j += 3) {
+      const pr = (Bk + Sk * N[i]) * gx[j] * gr, pg = (Bk + Sk * N[i + 1]) * gx[j + 1] * gr, pb = (Bk + Sk * N[i + 2]) * gx[j + 2] * gr;
       let r = pr + a0, gg = pg + a1, b = pb + a2;
       sumY += lw[0] * r + lw[1] * gg + lw[2] * b;
       if (m) {
@@ -1301,7 +1601,7 @@ function paint(cv, ctx, nE, sim, k, M) {
   return { mean: sumY / n / k, clip: clip / n };
 }
 function pixelY(sim, nE, x, y) {
-  const i = (y * nE.w + x) * 3, l = SGS.lightAt(sim, [nE.data[i], nE.data[i + 1], nE.data[i + 2]], x);
+  const i = (y * nE.w + x) * 3, l = SGS.lightAt(sim, [nE.data[i], nE.data[i + 1], nE.data[i + 2]], x, y);
   return sim.lw[0] * l[0] + sim.lw[1] * l[1] + sim.lw[2] * l[2];
 }
 
@@ -1835,10 +2135,10 @@ function render() {
   const sc = currentScene();
   if (!sceneReady(sc)) return;
   const L = layout(sc.img.w, sc.img.h);
-  const pA = profileFor('A'), pB = profileFor('B'), hdr = S.content === 'hdr', lw = hdr ? LW2020 : LW709;
+  const pA = profileFor('A'), pB = profileFor('B'), hdr = S.content === 'hdr', par = sc.img.w / sc.img.h;
   let nA, nB, M, hdrInfo = null;
   if (hdr) {
-    const base = getHdrBase(sc), srcMax = hdrSourceMax(base), tA = tmTarget('A', pA), tB = tmTarget('B', pB);
+    const base = getHdrBase(sc), srcMax = hdrSourceMax(base), tA = tmTarget('A', pA, par), tB = tmTarget('B', pB, par);
     nA = getHdrN(base, srcMax, tA, L.tw, L.th);
     nB = Math.abs(tB - tA) < 1e-6 ? nA : getHdrN(base, srcMax, tB, L.tw, L.th);
     M = OUT.from2020;
@@ -1848,12 +2148,13 @@ function render() {
     nB = toneKey(pA) === toneKey(pB) ? nA : getN(sc, pB, L.tw, L.th);
     M = OUT.from709;
   }
-  const sA = SGS.simSide(S, 'A', pA, nA, L.tw, lw), sB = SGS.simSide(S, 'B', pB, nB, L.tw, lw);
+  const so = { tw: L.tw, th: L.th, space: hdr ? 'bt2020' : 'bt709', par };
+  const sA = SGS.simSide(S, 'A', pA, nA, so), sB = SGS.simSide(S, 'B', pB, nB, so);
   const ref = S.display.mode === 'fixed' ? S.display.monitor : Math.max(sA.peakRef, sB.peakRef);
   const stA = paint(cvA, ctxA, nA, sA, 1 / ref, M), stB = paint(cvB, ctxB, nB, sB, 1 / ref, M);
   // Washed out: projected luminance (B_f + S·nY)·g below the room light, i.e. nY below (amb/g − B_f)/S.
   for (const [st, sim, nE] of [[stA, sA, nA], [stB, sB, nB]]) st.wash = sim.ambN > 0 ? SGS.fractionBelow(nE, (sim.ambN / sim.gC - sim.Bf) / sim.span) : 0;
-  last = { sc, nA, nB, sA, sB, ref, stA, stB, hdr: hdrInfo };
+  last = { sc, nA, nB, sA, sB, ref, stA, stB, hdr: hdrInfo, par };
   updateResults();
 }
 
@@ -1898,7 +2199,7 @@ function updateResults() {
   tr(`Darkest black (${u})`, fmtL(a.floorC), fmtL(b.floorC), chg(a.floorC, b.floorC, true));
   if (last.hdr) tr('Bright parts squeezed by tone mapping', pctTxt(last.nA.squeezed), pctTxt(last.nB.squeezed), chg(last.nA.squeezed || 1e-9, last.nB.squeezed || 1e-9, true));
   if (amb) tr('Washed out by ambient light', pctTxt(stA.wash), pctTxt(stB.wash), chg(stA.wash || 1e-9, stB.wash || 1e-9, true));
-  $('rt').innerHTML = `<caption>Middle of the screen, from your seat${S.seat ? ` (${sideText()} to the side)` : ''}</caption><thead><tr><th scope="col"></th><th scope="col" class="ca">A · ${nmA}</th><th scope="col" class="cb">B · ${nmB}</th><th scope="col">Difference</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+  $('rt').innerHTML = `<caption>Middle of the screen, from your seat${seatDesc() ? ` (${seatDesc()})` : ''}</caption><thead><tr><th scope="col"></th><th scope="col" class="ca">A · ${nmA}</th><th scope="col" class="cb">B · ${nmB}</th><th scope="col">Difference</th></tr></thead><tbody>${rows.join('')}</tbody>`;
 
   // all profiles
   const ap = S.profiles.map(p => {
@@ -1927,20 +2228,23 @@ function verdictHTML(a, b, stA, stB, nmA, nmB) {
       : `Tone mapping is left as it was for A, so B shows the whole picture ${Math.abs(r - 1) < 0.005 ? 'at the same brightness' : `${(Math.abs(r - 1) * 100).toFixed(0)}% ${r > 1 ? 'brighter' : 'dimmer'}`}.`;
     out.push(`<p>HDR: the brightest parts of this picture are about ${fmtL(h.peak)} ${u}${h.graded ? ' (an HDR grade made by this app)' : ''}. A shows up to ${fmtL(a.whiteC)} and B up to ${fmtL(b.whiteC)} ${u}. ${tmText} ${tail}</p>`);
   }
-  if (Math.abs(S.screenB.size - S.screenA.size) > 0.5) {
-    const af = areaFactor(S.screenB), gr = S.screenB.gain / S.screenA.gain, bigger = S.screenB.size > S.screenA.size;
+  const af = areaFactor(S.screenB, last.par), shapeDiff = S.screenA.aspect !== S.screenB.aspect;
+  if (Math.abs(af - 1) > 0.005) {
+    const gr = S.screenB.gain / S.screenA.gain, bigger = af < 1;
     const areaPct = Math.round(Math.abs(1 / af - 1) * 100), sizePct = Math.round(Math.abs(af - 1) * 100), gainPct = Math.round(Math.abs(gr - 1) * 100);
-    out.push(`<p>B is ${bigger ? 'bigger' : 'smaller'} (${fmtG(S.screenB.size)} vs ${fmtG(S.screenA.size)} inches), so the same projector light is spread over ${areaPct}% ${bigger ? 'more' : 'less'} area. That makes it ${sizePct}% ${bigger ? 'dimmer' : 'brighter'}${Math.abs(gr - 1) > 0.005 ? `, while the gain makes it ${gainPct}% ${gr > 1 ? 'brighter' : 'dimmer'}` : ''}.</p>`);
+    const what = shapeDiff ? `B is ${fmtG(S.screenB.size)}" ${shapeName(S.screenB)} and A is ${fmtG(S.screenA.size)}" ${shapeName(S.screenA)}` : `B is ${S.screenB.size > S.screenA.size ? 'bigger' : 'smaller'} (${fmtG(S.screenB.size)} vs ${fmtG(S.screenA.size)} inches)`;
+    out.push(`<p>${what}, so for this picture the same projector light is spread over ${areaPct}% ${bigger ? 'more' : 'less'} area. That makes it ${sizePct}% ${bigger ? 'dimmer' : 'brighter'}${Math.abs(gr - 1) > 0.005 ? `, while the gain makes it ${gainPct}% ${gr > 1 ? 'brighter' : 'dimmer'}` : ''}.</p>`);
   }
+  if (S.screenA.aspect === '2.39' || S.screenB.aspect === '2.39') out.push(`<p class="hint">On a 2.39:1 wide screen, wide movies fill the width and 16:9 pictures fill the height. The projector's light is spread over its whole 16:9 frame, so 16:9 pictures on a wide screen come out brighter than wide movies.</p>`);
   if (S.ambient > 0) {
     const cA = (a.whiteC + a.ambN) / (a.blackC + a.ambN), cB = (b.whiteC + b.ambN) / (b.blackC + b.ambN);
     out.push(`<p>With ambient light, contrast drops to <strong class="ta">${ratio(cA)}</strong> on A and <strong class="tb">${ratio(cB)}</strong> on B. Ambient light washes out ${pctTxt(stA.wash)} of this picture on A and ${pctTxt(stB.wash)} on B.</p>`);
   } else if (!diffProf) {
     out.push(`<p>With the lights off, both have the same contrast (${ratio(a.whiteC / a.blackC)}), because the screen changes black by the same amount as white. The difference shows up with ambient light.</p>`);
   }
-  if (S.seat > 0) {
-    const fa = falloff(S.screenA, S.seat) * 100, fb = falloff(S.screenB, S.seat) * 100;
-    out.push(`<p>Sitting ${sideText()} to the side, A keeps ${fa.toFixed(0)}% of its brightness and B keeps ${fb.toFixed(0)}%.</p>`);
+  if (seatDesc()) {
+    const fa = SGS.seatKeeps(S, S.screenA) * 100, fb = SGS.seatKeeps(S, S.screenB) * 100;
+    out.push(`<p>At this seat (${seatDesc()}), A keeps ${fa.toFixed(0)}% of the brightness it has from your main seat and B keeps ${fb.toFixed(0)}%.</p>`);
   }
   for (const s of [a, b]) {
     if (s.dyn && s.irisS > (s.prof.black / s.prof.blackOpen) * 1.5) {
@@ -1959,30 +2263,57 @@ function verdictHTML(a, b, stA, stB, nmA, nmB) {
     }
   }
   out.push(sureHTML(a, b));
-  const angle = S.seat > 0 || S.geo.on ? ' × side-seat dimming' : '';
-  const sizePart = Math.abs(S.screenB.size - S.screenA.size) > 0.5 ? ` × (${fmtG(S.screenA.size)} ÷ ${fmtG(S.screenB.size)})²` : '';
-  out.push(`<p class="math">How B is worked out: ${fmtL(b.prof.white)} ${u} × ${fmtG(S.screenB.gain)} ÷ ${fmtG(S.screenA.gain)}${sizePart}${angle} = ${fmtL(b.whiteC)} ${u}</p>`);
+  const parts = [`${fmtL(b.prof.white)} ${u}`, `${fmtG(S.screenB.gain)} ÷ ${fmtG(S.screenA.gain)}`];
+  if (Math.abs(af - 1) > 0.0005) parts.push(shapeDiff ? `${num(af)} (frame area)` : `(${fmtG(S.screenA.size)} ÷ ${fmtG(S.screenB.size)})²`);
+  const refA = SGS.refF(S, S.screenA);
+  if (Math.abs(refA - 1) > 0.0005) parts.push(`1 ÷ ${num(refA)} (screen A's lobe at your main seat)`);
+  const lobeB = SGS.lobeAt(S, S.screenB, SGS.mainSeat(S));
+  if (Math.abs(lobeB - 1) > 0.0005) parts.push(`${num(lobeB)} (B's lobe at your main seat)`);
+  const cmB = SGS.colorModel(S, 'B', last.hdr ? 'bt2020' : 'bt709'), rc = SGS.recalCost(cmB);
+  if (Math.abs(rc - 1) > 0.0005) parts.push(`${num(rc)} (recalibrating white)`);
+  if (seatDesc()) parts.push(`${num(SGS.seatKeeps(S, S.screenB))} (this seat)`);
+  out.push(`<p class="math">How B is worked out, middle of the screen: ${parts.join(' × ')} = ${fmtL(b.whiteC)} ${u}</p>`);
   return out.join('');
 }
 
 // Which inputs are measured and which are estimates, in one line.
 function sureHTML(a, b) {
-  const notes = [];
+  const notes = [], A = S.screenA, B = S.screenB;
   const example = a.prof.example || b.prof.example;
   if (example) notes.push('The projector readings are examples, not yours.');
   if (!example && (a.prof.tone !== 'table' || b.prof.tone !== 'table')) notes.push("Shadows use a standard curve. Load your grayscale readings (Edit reading → Load from a measurement file) for exact dark scenes.");
-  if (!S.screenB.gainMeasured) notes.push(S.screenA.gainMeasured
+  for (const [k, scr] of [['A', A], ['B', B]]) { const w = throwWarning(scr); if (w) notes.push(`Screen ${k}: ${w}`); }
+  if (!B.gainMeasured) notes.push(A.gainMeasured
     ? "B's gain is the maker's number but yours is measured, so B may look a little too bright."
     : "B's gain is the maker's number, which can be off by about 10%.");
-  if (S.ambient > 0 && !S.screenB.rejMeasured) notes.push('How much ambient light each screen blocks is a typical number.');
-  if (S.seat > 0 || S.geo.on) notes.push('Dimming from the side is an estimate.');
+  if (S.ambient > 0 && !B.ambRatio) notes.push('How much room light each screen blocks is a typical number.');
+  if (seatDesc() || S.geo.on) {
+    const guess = [A, B].filter(x => !x.angMeasured).length;
+    if (guess) notes.push(guess === 2 ? 'Dimming away from the main seat is a typical number for both screens.' : `Dimming away from the main seat is a typical number for screen ${A.angMeasured ? 'B' : 'A'}.`);
+  }
+  if (B.color && A.color) notes.push('Screen color is measured.');
   if (last && last.hdr) notes.push(last.hdr.graded ? 'HDR uses the standard tone-mapping curve, and this picture is an SDR photo given an HDR grade by the app.' : 'HDR uses the standard tone-mapping curve; your projector or processor tone-maps in its own way.');
-  if (S.screenB.size > S.screenA.size + 0.5) notes.push('If you zoom the lens to fill the bigger screen, some projectors lose a little extra light.');
-  const lvl = example ? 'Rough' : notes.length ? 'Good' : 'High';
+  if (areaFactor(B, last ? last.par : 16 / 9) < 0.995) notes.push('If you zoom the lens to fill the bigger screen, some projectors lose a little extra light.');
+  const open = notes.filter(n => n !== 'Screen color is measured.');
+  const lvl = example ? 'Rough' : open.length ? 'Good' : 'High';
   const tip = example ? ' Add your own readings to fix this.'
-    : !S.screenB.gainMeasured ? ' To make it exact, measure a sample of screen B (Screen B → Fine-tune).' : '';
-  const body = notes.length ? notes.join(' ') + tip : 'Based on your own readings and a measured sample of screen B.';
+    : !B.gainMeasured ? ' To make it exact, measure a sample of screen B (Screens → Measure your screens).' : '';
+  const body = open.length ? notes.join(' ') + tip : 'Based on your own readings and a measured sample of screen B.' + (B.color && A.color ? ' Screen color is measured.' : '');
   return `<p class="sure"><span class="lvl ${lvl.toLowerCase()}">How sure: ${lvl}</span>${body}</p>`;
+}
+// The seat you're looking from, compared with the main seat (empty for the main seat).
+function seatDesc() {
+  const p = [];
+  if (Math.abs(S.geo.side) > 0.01) p.push(`${Number(Math.abs(mToU(S.geo.side)).toFixed(1))} ${S.geo.distUnit} to the ${S.geo.side < 0 ? 'left' : 'right'}, ${Math.round(Math.abs(S.seat))}°`);
+  if (S.geo.eyeUp > 0.45) p.push('standing up'); else if (S.geo.eyeUp > 0.15) p.push('back row on a riser');
+  return p.join(', ');
+}
+const shapeName = scr => scr.aspect === '2.39' ? '2.39:1 wide' : '16:9';
+// A screen made for a different kind of projector than the one set in Where you sit.
+function throwWarning(scr) {
+  if (scr.throw === 'ust' && S.geo.proj !== 'ust') return 'made for ultra short throw projectors, but your projector is set to long-throw (Where you sit → More detail). It won\'t look like this.';
+  if (scr.throw === 'long' && S.geo.proj === 'ust') return 'made for long-throw projectors, not ultra short throw. With an ultra short throw projector it sends most of the light away from you (Where you sit → More detail sets your projector).';
+  return '';
 }
 
 // ---------- pixel probe
@@ -2041,8 +2372,16 @@ function renderScreens() {
   for (const k of ['a', 'b']) {
     const s = k === 'a' ? S.screenA : S.screenB;
     $(k + 'Preset').value = PRESETS.some(p => p.id === s.preset) ? s.preset : 'custom';
-    $(k + 'Name').value = s.name; $(k + 'Gain').value = s.gain; $(k + 'Size').value = s.size; $(k + 'Rej').value = s.rej; $(k + 'Half').value = s.half;
+    $(k + 'Name').value = s.name; $(k + 'Gain').value = s.gain; $(k + 'Size').value = s.size; $(k + 'Shape').value = s.aspect;
+    $(k + 'Rej').value = s.rej;
+    $(k + 'HalfH').value = Number(s.hH.toFixed(1)); $(k + 'HalfV').value = Number(s.hV.toFixed(1)); $(k + 'Lobe').value = s.lobe;
+    const w = throwWarning(s);
+    $(k + 'Warn').hidden = !w; $(k + 'Warn').textContent = w ? 'This screen is ' + w : '';
+    const meas = [s.gainMeasured && 'gain', s.angMeasured && 'dimming away from the main seat', s.color && S.screenA.color && 'color'].filter(Boolean);
+    $(k + 'Meas').hidden = !meas.length; $(k + 'Meas').textContent = meas.length ? 'Measured: ' + meas.join(', ') + '.' : '';
+    $(k + 'AmbMeas').hidden = !(k === 'b' && s.ambRatio); $(k + 'AmbMeas').textContent = k === 'b' && s.ambRatio ? `Measured with a sample under your lights: it reflects ${Math.round(s.ambRatio * 100)}% as much room light as your screen. Typing a number here replaces that.` : '';
   }
+  renderMeasStatus();
 }
 const AMB_MIN = 0.01, AMB_MAX = 300;
 const ambToPos = v => v <= 0 ? 0 : clamp(Math.round(1000 * Math.log(v / AMB_MIN) / Math.log(AMB_MAX / AMB_MIN)), 1, 1000);
@@ -2050,15 +2389,19 @@ const posToAmb = p => p <= 0 ? 0 : Number((AMB_MIN * Math.pow(AMB_MAX / AMB_MIN,
 function renderRoom(skipNum) {
   $('ambRange').value = ambToPos(S.ambient);
   if (!skipNum) $('ambNum').value = S.ambient ? inVal(S.ambient) : '0';
-  const rejA = clamp(S.screenA.rej, 0, 95) / 100, rejB = clamp(S.screenB.rej, 0, 95) / 100, ambB = S.ambient * (1 - rejB) / (1 - rejA);
+  const ambB = SGS.ambientOn(S, 'B'), r = ambB / (S.ambient || 1);
+  const why = S.screenB.ambRatio ? ' (measured with your sample)' : Math.abs(r - 1) < 0.005 ? ', the same as your screen' : r < 1 ? '. It blocks more room light than your screen.' : '. It blocks less room light than your screen.';
   $('ambDerived').innerHTML = S.ambient > 0
-    ? `Screen <span class="tb">B</span> gets ${fmtL(ambB)} ${U()} of the same light${rejA === rejB ? ' (it blocks the same amount as A)' : ` (B blocks ${S.screenB.rej}%, A blocks ${S.screenA.rej}%)`}.`
-    : 'Dark room. Slide right to add lamp or window light.';
+    ? `Screen <span class="tb">B</span> with the same lights: ${fmtL(ambB)} ${U()}${why}`
+    : '0 is a dark room. Slide right to add your lights.';
 }
 function renderSeat() {
-  $('seat').value = S.seat; $('seatOut').textContent = sideText();
-  $('geoOn').checked = S.geo.on; $('geoBox').hidden = !S.geo.on;
-  $('geoAspect').value = S.geo.aspect; $('geoDist').value = S.geo.dist; $('geoDistU').value = S.geo.distUnit;
+  const ftU = S.geo.distUnit === 'ft', sl = $('seat');
+  sl.max = ftU ? 20 : 6; sl.min = -sl.max; sl.step = ftU ? 0.5 : 0.1; sl.value = Number(mToU(S.geo.side).toFixed(1)); $('seatOut').textContent = sideText();
+  $('geoOn').checked = S.geo.on;
+  $('geoDist').value = S.geo.dist; $('geoDistU').value = S.geo.distUnit; $('geoProj').value = S.geo.proj;
+  $('eyeUp').innerHTML = EYES.map(([f, t]) => `<option value="${f}">${ftU ? t : t.replace('about 1 ft', 'about 0.3 m').replace('about 2 ft', 'about 0.6 m')}</option>`).join('');
+  $('eyeUp').value = String(EYES.reduce((b, [f]) => Math.abs(f * 0.3048 - S.geo.eyeUp) < Math.abs(b * 0.3048 - S.geo.eyeUp) ? f : b, 0));
 }
 function renderDisplay() {
   setPressed('dispSeg', 'mode', S.display.mode);
@@ -2261,21 +2604,31 @@ $('profForm').addEventListener('submit', e => {
 });
 
 // screens
-const presetOpts = PRESETS.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('') + '<option value="custom">Custom</option>';
+const presetOpts = Object.entries(PRESET_GROUPS).map(([g, label]) => `<optgroup label="${esc(label)}">${PRESETS.filter(p => p.group === g).map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</optgroup>`).join('') + '<option value="custom">Custom</option>';
+const lobeOpts = Object.entries(LOBES).map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('');
 for (const k of ['a', 'b']) {
   const scr = () => k === 'a' ? S.screenA : S.screenB;
   const custom = () => { scr().preset = 'custom'; $(k + 'Preset').value = 'custom'; };
   $(k + 'Preset').innerHTML = presetOpts;
+  $(k + 'Lobe').innerHTML = lobeOpts;
   $(k + 'Preset').addEventListener('change', e => {
     const p = PRESETS.find(x => x.id === e.target.value), s = scr();
-    if (p) { const generic = !s.name.trim() || PRESETS.some(x => x.name === s.name); Object.assign(s, { preset: p.id, gain: p.gain, rej: p.rej, half: p.half, lobe: p.lobe, gainMeasured: false, rejMeasured: false }); if (generic) s.name = p.name; }
+    if (p) {
+      const generic = !s.name.trim() || PRESETS.some(x => x.name === s.name);
+      // A new kind of screen: everything measured for the old one no longer applies (color stays only on A, the reference).
+      Object.assign(s, fromPreset(p), k === 'a' ? { color: s.color } : {});
+      if (generic) s.name = p.name;
+    }
     else { s.preset = 'custom'; $(k + 'Fine').open = true; }
     renderScreens(); renderRoom(); changed();
   });
   $(k + 'Name').addEventListener('input', e => { scr().name = e.target.value.slice(0, 40); changed(); });
   onNum($(k + 'Gain'), v => { if (v >= 0.1) { scr().gain = clamp(v, 0.1, 5); scr().gainMeasured = false; custom(); } });
-  onNum($(k + 'Rej'), v => { scr().rej = clamp(v, 0, 95); scr().rejMeasured = false; custom(); renderRoom(); });
-  onNum($(k + 'Half'), v => { scr().half = clamp(v, 0, 90); custom(); });
+  onNum($(k + 'Rej'), v => { scr().rej = clamp(v, 0, 95); if (k === 'b') scr().ambRatio = null; custom(); renderRoom(); renderScreens(); });
+  onNum($(k + 'HalfH'), v => { scr().hH = clamp(v, 0, 90); scr().pH = 2; scr().angMeasured = false; custom(); });
+  onNum($(k + 'HalfV'), v => { scr().hV = clamp(v, 0, 90); scr().pV = 2; scr().angMeasured = false; custom(); });
+  $(k + 'Lobe').addEventListener('change', e => { scr().lobe = e.target.value; scr().angMeasured = false; custom(); renderScreens(); changed(); });
+  $(k + 'Shape').addEventListener('change', e => { scr().aspect = e.target.value; changed(); });
   onNum($(k + 'Size'), v => { if (v >= 40) scr().size = clamp(v, 40, 400); });
 }
 function gainCalc() {
@@ -2287,41 +2640,149 @@ function gainCalc() {
 }
 $('gainLux').addEventListener('input', gainCalc);
 $('gainLum').addEventListener('input', gainCalc);
-$('gainUse').addEventListener('click', () => { const g = parseFloat($('gainUse').dataset.g); if (g > 0) { S.screenA.gain = g; S.screenA.gainMeasured = true; S.screenA.preset = 'custom'; renderScreens(); changed(); toast(`Your screen's gain is now ${g}`); } });
+// The reading at your seat is the gain in that direction; a mirror-like screen's peak gain is a little higher.
+$('gainUse').addEventListener('click', () => { const g = parseFloat($('gainUse').dataset.g); if (g > 0) { const peak = Number((g / SGS.refF(S, S.screenA)).toFixed(3)); S.screenA.gain = clamp(peak, 0.1, 5); S.screenA.gainMeasured = true; S.screenA.preset = 'custom'; renderScreens(); changed(); toast(`Your screen's gain is now ${fmtG(S.screenA.gain)}`); } });
 
-// Screen B from a sample taped onto screen A: the reading ratio is B's gain relative to A.
-function sampleCalc() {
-  const wa = parseFloat($('smpWA').value), wb = parseFloat($('smpWB').value), la = parseFloat($('smpLA').value), lb = parseFloat($('smpLB').value);
-  const g = wa > 0 && wb > 0 ? S.screenA.gain * wb / wa : NaN, ok = g >= 0.1 && g <= 5;
-  const rejA = clamp(S.screenA.rej, 0, 95) / 100;
-  const rej = la > 0 && lb >= 0 ? clamp(Math.round((1 - (lb / la) * (1 - rejA)) * 1000) / 10, 0, 95) : NaN;
-  const diff = ok ? Math.round((wb / wa - 1) * 100) : 0;
-  $('smpOut').textContent = !ok ? 'Enter the two white readings'
-    : `B's gain: ${g.toFixed(2)} (${diff === 0 ? 'same as' : Math.abs(diff) + '% ' + (diff > 0 ? 'brighter than' : 'dimmer than')} yours)${isFinite(rej) ? `, blocks ${rej}%` : ''}`;
-  $('smpUse').disabled = !ok;
-  $('smpUse').dataset.g = ok ? String(g) : '';
-  $('smpUse').dataset.r = isFinite(rej) ? String(rej) : '';
+// ---------- measuring screens: brightness from several seats, room light, color (stored in S.meas, meters and nits)
+const measDlg = $('measDlg');
+const FT = 0.3048;
+function newMeas() {
+  const seat = (name, side, up) => ({ name, side, up, a: null, b: null });
+  return { mode: 'own', seats: [seat('Main seat', 0, 0), seat('Side seat', 4 * FT, 0), seat('Far side seat', 8 * FT, 0), seat('Standing up', 0, 2 * FT)],
+    light: { a: null, b: null }, color: { ca: [null, null], cb: [null, null], sa: [null, null], sb: [null, null] }, recal: true };
 }
-for (const id of ['smpWA', 'smpWB', 'smpLA', 'smpLB']) $(id).addEventListener('input', sampleCalc);
-$('smpUse').addEventListener('click', () => {
-  const g = parseFloat($('smpUse').dataset.g), r = $('smpUse').dataset.r;
-  if (!(g > 0)) return;
-  Object.assign(S.screenB, { gain: Number(g.toFixed(3)), gainMeasured: true, preset: 'custom' });
-  if (r !== '') Object.assign(S.screenB, { rej: +r, rejMeasured: true });
-  renderScreens(); renderRoom(); changed();
-  toast('Screen B now uses your sample readings');
+const xyOK = a => a && a[0] > 0.05 && a[0] < 0.8 && a[1] > 0.05 && a[1] < 0.9;
+const upv = ([x, y]) => { const d = -2 * x + 12 * y + 3; return [4 * x / d, 9 * y / d]; };
+const duv = (p, q) => { const a = upv(p), b = upv(q); return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+// The first seat to the side: its color readings show how color changes off to the side.
+const colorSeat = M => M.seats.find((r, i) => i > 0 && Math.abs(r.side) > 0.01);
+function measResults() {
+  const M = S.meas, sample = M.mode === 'sample', D = SGS.distM(S), A = S.screenA, B = S.screenB, R = { lines: [], any: false };
+  const pct = v => `${Math.round(Math.abs(v) * 100)}%`;
+  const fitText = (f, who) => {
+    const ax = [f.h && `${Math.round(f.hH)}° to the side`, f.v && `${Math.round(f.hV)}° up or down`].filter(Boolean).join(' and ');
+    return `${who} half as bright at ${ax}. ${f.err < 0.05 ? `Matches your readings within ${Math.max(1, Math.round(f.err * 100))}%.` : `<span class="warn">Your readings don't fit a smooth curve well (off by up to ${Math.round(f.err * 100)}%). Check them, or add seats.</span>`}`;
+  };
+  const rows = k => M.seats.map(r => ({ side: r.side, up: r.up, L: r[k] }));
+  R.fitA = SGS.fitLobe(S, A, rows('a'));
+  if (R.fitA) R.lines.push(fitText(R.fitA, 'Your screen is'));
+  const a0 = M.seats[0].a, b0 = M.seats[0].b;
+  if (sample && a0 > 0 && b0 > 0) {
+    R.fitB = SGS.fitLobe(S, B, rows('b'));
+    const lobe = (scr, f) => SGS.lobeAt(S, f ? { ...scr, hH: f.hH, pH: f.pH, hV: f.hV, pV: f.pV } : scr, SGS.mainSeat(S));
+    R.gainB = A.gain * (b0 / a0) * lobe(A, R.fitA) / lobe(B, R.fitB);
+    const r = b0 / a0;
+    R.lines.push(`Sample: ${Math.abs(r - 1) < 0.005 ? 'as bright as' : `${pct(r - 1)} ${r > 1 ? 'brighter' : 'dimmer'} than`} your screen from your main seat (gain ${fmtG(Number(R.gainB.toFixed(2)))} if yours is ${fmtG(A.gain)}).${R.fitB ? ' ' + fitText(R.fitB, "It's") : ''}`);
+  } else if (sample && (a0 > 0 || b0 > 0)) R.lines.push('Add both main-seat readings (your screen and the sample) to compare them.');
+  const { a: la, b: lb } = M.light;
+  if (sample && la > 0 && lb >= 0) { R.ambRatio = clamp(lb / la, 0.01, 10); R.lines.push(`Room light: the sample reflects ${Math.round(R.ambRatio * 100)}% as much of your room light as your screen does.`); }
+  else if (la > 0) { R.ambient = la; R.lines.push(`Room light: ${fmtL(la)} ${U()} on your screen. "Use these" sets Ambient light to it.`); }
+  const C = M.color, cs = colorSeat(M);
+  // Warmer or cooler: lower x + y is bluer (cooler) along the usual white-point line.
+  const tone = (p, q) => p[0] + p[1] < q[0] + q[1] ? 'cooler (bluer)' : 'warmer (more yellow)';
+  const seen = d => d < 0.004 ? 'too small to notice' : d < 0.008 ? 'you may just notice it' : 'you will likely notice it';
+  if (xyOK(C.ca)) {
+    R.ang = cs ? Math.atan(Math.abs(cs.side) / D) / (Math.PI / 180) : 30;
+    R.colorA = { c: C.ca.slice(), s: cs && xyOK(C.sa) ? C.sa.slice() : null, ang: R.ang };
+    const t = [];
+    if (sample && xyOK(C.cb)) {
+      R.colorB = { c: C.cb.slice(), s: cs && xyOK(C.sb) ? C.sb.slice() : null, ang: R.ang };
+      const d = duv(C.ca, C.cb);
+      t.push(`From your main seat the sample is ${d < 0.0005 ? 'the same color as your screen' : `a little ${tone(C.cb, C.ca)} than your screen (${seen(d)})`}.`);
+      if (M.recal) { const cost = SGS.recalCost(SGS.colorModel({ ...S, screenA: { ...A, color: R.colorA }, screenB: { ...B, color: R.colorB, recal: true } }, 'B', 'bt709')); if (cost < 0.995) t.push(`Recalibrating for it costs about ${pct(1 - cost)} of its brightness.`); }
+    }
+    const shift = d => d < 0.004 ? 'too little to notice' : d < 0.008 ? 'a little (you may just notice it)' : 'enough to notice';
+    if (R.colorA.s) t.push(`From the ${esc(cs.name.toLowerCase())}, your screen's color changes ${shift(duv(C.ca, C.sa))}${R.colorB && R.colorB.s ? ` and the sample's changes ${shift(duv(C.cb, C.sb))}` : ''}.`);
+    if (t.length) R.lines.push('Color: ' + t.join(' '));
+  }
+  R.any = !!(R.fitA || R.gainB || R.ambRatio || R.ambient || (R.colorA && (R.colorA.s || R.colorB)));
+  return R;
+}
+function renderMeas() {
+  const M = S.meas, u = U(), lu = lenU();
+  measDlg.dataset.mode = M.mode;
+  setPressed('measMode', 'mode', M.mode);
+  const v = x => x === null || x === undefined ? '' : inVal(x), l = m => Number(mToU(m).toFixed(1));
+  $('measSeats').innerHTML = `<thead><tr><th scope="col">Seat</th><th scope="col">To the side (${lu})</th><th scope="col">Higher (${lu})</th><th scope="col">Your screen (${u})</th><th scope="col" class="smp">Sample (${u})</th><th scope="col"><span class="sr">Remove</span></th></tr></thead><tbody>${M.seats.map((r, i) => `<tr data-i="${i}">
+    <th scope="row">${i === 0 ? 'Main seat' : `<input type="text" data-k="name" value="${esc(r.name)}" maxlength="30" aria-label="Seat name">`}</th>
+    <td><input type="number" data-k="side" step="0.5" value="${l(r.side)}"${i === 0 ? ' disabled' : ''} aria-label="To the side"></td>
+    <td><input type="number" data-k="up" step="0.5" value="${l(r.up)}"${i === 0 ? ' disabled' : ''} aria-label="Higher"></td>
+    <td><input type="number" data-k="a" min="0" step="any" value="${v(r.a)}" aria-label="Your screen"></td>
+    <td class="smp"><input type="number" data-k="b" min="0" step="any" value="${v(r.b)}" aria-label="Sample"></td>
+    <td>${i === 0 ? '' : '<button type="button" class="btn small mrm" data-mrm="1" aria-label="Remove this seat">×</button>'}</td></tr>`).join('')}</tbody>`;
+  $('measAddSeat').disabled = M.seats.length >= MAX_SEATS;
+  $('measLA').value = v(M.light.a); $('measLB').value = v(M.light.b);
+  const C = M.color, xv = x => x === null || x === undefined ? '' : x;
+  [['mcAx', C.ca[0]], ['mcAy', C.ca[1]], ['mcBx', C.cb[0]], ['mcBy', C.cb[1]], ['msAx', C.sa[0]], ['msAy', C.sa[1]], ['msBx', C.sb[0]], ['msBy', C.sb[1]]].forEach(([id, x]) => { $(id).value = xv(x); });
+  const cs = colorSeat(M);
+  $('mcSideLbl').textContent = cs ? cs.name : 'Side seat';
+  $('mcSideLbl').parentElement.hidden = !cs;
+  $('measRecal').checked = M.recal;
+  for (const el of measDlg.querySelectorAll('.u')) el.textContent = u;
+  measCalc();
+}
+function measCalc() {
+  const R = measResults();
+  $('measOut').innerHTML = R.lines.length ? R.lines.map(t => `<p>${t}</p>`).join('') : '<p class="hint">Enter the main seat and at least one other seat, the room-light reading, or the color readings.</p>';
+  $('measUse').disabled = !R.any;
+  return R;
+}
+function renderMeasStatus() {
+  const A = S.screenA, B = S.screenB, m = [];
+  if (A.angMeasured) m.push("your screen's dimming");
+  if (B.gainMeasured) m.push("the sample's gain");
+  if (B.angMeasured) m.push("the sample's dimming");
+  if (B.ambRatio) m.push('room light on the sample');
+  if (A.color) m.push('color');
+  $('measStatus').textContent = m.length ? `Measured: ${m.join(', ')}.` : 'Typical numbers for each kind of screen until you measure. A sample of the new screen makes it exact.';
+}
+$('measOpen').addEventListener('click', () => { if (!S.meas) S.meas = newMeas(); renderMeas(); measDlg.showModal(); });
+$('measClose').addEventListener('click', () => measDlg.close());
+$('measMode').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.meas.mode = b.dataset.mode; renderMeas(); persist(); });
+$('measSeats').addEventListener('input', e => {
+  const t = e.target, tr = t.closest('tr'); if (!tr || !t.dataset.k) return;
+  const r = S.meas.seats[+tr.dataset.i], k = t.dataset.k, x = parseFloat(t.value);
+  if (k === 'name') r.name = t.value.slice(0, 30) || 'Seat';
+  else if (k === 'side' || k === 'up') r[k] = Number.isFinite(x) ? clamp(uToM(x), k === 'up' ? -3 : -30, k === 'up' ? 3 : 30) : 0;
+  else r[k] = Number.isFinite(x) && x >= 0 ? fromU(x) : null;
+  if (k === 'name' || k === 'side') { const cs = colorSeat(S.meas); $('mcSideLbl').textContent = cs ? cs.name : 'Side seat'; $('mcSideLbl').parentElement.hidden = !cs; }
+  measCalc(); persist();
+});
+$('measSeats').addEventListener('click', e => { const b = e.target.closest('[data-mrm]'); if (!b) return; S.meas.seats.splice(+b.closest('tr').dataset.i, 1); renderMeas(); persist(); });
+$('measAddSeat').addEventListener('click', () => { if (S.meas.seats.length < MAX_SEATS) { S.meas.seats.push({ name: 'Seat ' + (S.meas.seats.length + 1), side: 0, up: 0, a: null, b: null }); renderMeas(); persist(); } });
+for (const [id, k] of [['measLA', 'a'], ['measLB', 'b']]) $(id).addEventListener('input', e => { const x = parseFloat(e.target.value); S.meas.light[k] = Number.isFinite(x) && x >= 0 ? fromU(x) : null; measCalc(); persist(); });
+for (const [id, k, c] of [['mcAx', 'ca', 0], ['mcAy', 'ca', 1], ['mcBx', 'cb', 0], ['mcBy', 'cb', 1], ['msAx', 'sa', 0], ['msAy', 'sa', 1], ['msBx', 'sb', 0], ['msBy', 'sb', 1]])
+  $(id).addEventListener('input', e => { const x = parseFloat(e.target.value); S.meas.color[k][c] = Number.isFinite(x) ? x : null; measCalc(); persist(); });
+$('measRecal').addEventListener('change', e => { S.meas.recal = e.target.checked; measCalc(); persist(); });
+$('measClear').addEventListener('click', () => { const mode = S.meas.mode; S.meas = newMeas(); S.meas.mode = mode; renderMeas(); persist(); });
+$('measUse').addEventListener('click', () => {
+  const R = measCalc(); if (!R.any) return;
+  const A = S.screenA, B = S.screenB, used = [];
+  const lobe = (scr, f) => { Object.assign(scr, { hH: Number(f.hH.toFixed(2)), pH: Number(f.pH.toFixed(3)), hV: Number(f.hV.toFixed(2)), pV: Number(f.pV.toFixed(3)), angMeasured: true, preset: 'custom' }); };
+  if (R.fitA) { lobe(A, R.fitA); used.push("your screen's dimming"); }
+  if (R.gainB) { Object.assign(B, { gain: clamp(Number(R.gainB.toFixed(3)), 0.1, 5), gainMeasured: true, preset: 'custom' }); used.push("the sample's gain"); }
+  if (R.fitB) { lobe(B, R.fitB); used.push("the sample's dimming"); }
+  if (R.ambRatio) { B.ambRatio = R.ambRatio; used.push('room light on the sample'); }
+  if (R.ambient) { S.ambient = clamp(R.ambient, 0, 1000); used.push('your room light'); }
+  if (R.colorA && (R.colorA.s || R.colorB)) { A.color = R.colorA; used.push('color'); }
+  if (R.colorB) { B.color = R.colorB; B.recal = S.meas.recal; }
+  renderScreens(); renderRoom(); changed(); measDlg.close();
+  toast('Now using ' + used.join(', '));
 });
 
 // ambient light
 $('ambRange').addEventListener('input', e => { S.ambient = posToAmb(+e.target.value); renderRoom(); changed(); });
 $('ambNum').addEventListener('input', e => { const v = parseFloat(e.target.value); if (Number.isFinite(v) && v >= 0) { S.ambient = clamp(fromU(v), 0, 1000); renderRoom(true); changed(); } });
 
+
 // seat & geometry
-$('seat').addEventListener('input', e => { S.seat = +e.target.value; $('seatOut').textContent = sideText(); changed(); });
-$('geoOn').addEventListener('change', e => { S.geo.on = e.target.checked; $('geoBox').hidden = !S.geo.on; changed(); });
-onNum($('geoDist'), v => { S.geo.dist = clamp(v, 0.5, 100); $('seatOut').textContent = sideText(); });
-$('geoAspect').addEventListener('change', e => { S.geo.aspect = e.target.value; changed(); });
-$('geoDistU').addEventListener('change', e => { const m = e.target.value; if (m !== S.geo.distUnit) { S.geo.dist = Number((m === 'm' ? S.geo.dist * 0.3048 : S.geo.dist / 0.3048).toFixed(1)); S.geo.distUnit = m; $('seatOut').textContent = sideText(); $('geoDist').value = S.geo.dist; changed(); } });
+$('seat').addEventListener('input', e => { S.geo.side = clamp(uToM(+e.target.value), -10, 10); seatFromSide(); $('seatOut').textContent = sideText(); changed(); });
+$('geoOn').addEventListener('change', e => { S.geo.on = e.target.checked; changed(); });
+onNum($('geoDist'), v => { S.geo.dist = clamp(v, 0.5, 100); seatFromSide(); $('seatOut').textContent = sideText(); });
+$('geoDistU').addEventListener('change', e => { const m = e.target.value; if (m !== S.geo.distUnit) { S.geo.dist = Number((m === 'm' ? S.geo.dist * 0.3048 : S.geo.dist / 0.3048).toFixed(1)); S.geo.distUnit = m; seatFromSide(); renderSeat(); if (measDlg.open) renderMeas(); changed(); } });
+$('eyeUp').addEventListener('change', e => { S.geo.eyeUp = +e.target.value * 0.3048; changed(); });
+$('geoProj').innerHTML = Object.entries(PROJ).map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join('');
+$('geoProj').addEventListener('change', e => { S.geo.proj = e.target.value; renderScreens(); changed(); });
 
 // display scale
 $('dispSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.display.mode = b.dataset.mode; renderDisplay(); changed(); });
