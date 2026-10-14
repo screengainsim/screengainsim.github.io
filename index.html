@@ -1,0 +1,2495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Screen Gain Simulator</title>
+<meta name="description" content="Compare how your projector would look on two screens (gain, size, ALR, room light, seat, SDR and HDR) using your own meter readings.">
+<meta property="og:title" content="Screen Gain Simulator">
+<meta property="og:description" content="Compare how your projector would look on two screens (gain, size, ALR, room light, seat, SDR and HDR) using your own meter readings.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://screengainsim.github.io/">
+<meta property="og:image" content="https://screengainsim.github.io/preview.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23121315%27/%3E%3Crect x=%275%27 y=%279%27 width=%2711%27 height=%2714%27 fill=%27%2382c8ff%27/%3E%3Crect x=%2716%27 y=%279%27 width=%2711%27 height=%2714%27 fill=%27%23ffb65e%27/%3E%3C/svg%3E">
+<style>:root{color-scheme:dark}html,body{margin:0;background:#0b0b0b}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Hanken+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a viewing room. A neutral, hue-free surround holds the comparison; a meter-style control rail sits to the right; numbers read like instrument displays.
+   One dark theme on purpose: a bright page around the picture changes how you judge black levels. */
+:root {
+  color-scheme: dark;
+  --surround: #0b0b0b;
+  --bg: #121315;
+  --panel: #191b1e;
+  --field: #0f1012;
+  --raise: #24272c;
+  --line: #2a2e34;
+  --line-2: #3c4149;
+  --fg: #e8eaed;
+  --muted: #a5abb3;
+  --faint: #7a818a;
+  --a: #82c8ff;
+  --b: #ffb65e;
+  --good: #84dba8;
+  --bad: #ff8a7e;
+  --warn: #f1c96a;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-ui: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 8px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1660px; margin: 0 auto; padding-inline: clamp(16px, 2.5vw, 32px); padding-block: 18px 56px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: 30px; font-weight: 800; font-stretch: 82%; line-height: 1.05; letter-spacing: -0.01em; }
+h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+h3 { font-size: 18px; font-weight: 700; font-stretch: 87%; }
+p { margin: 0; }
+a { color: var(--a); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.brand p { margin-top: 6px; color: var(--muted); max-width: 62ch; }
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.steps { display: flex; flex-wrap: wrap; gap: 6px 26px; list-style: none; margin: 12px 0 16px; padding: 0; color: var(--muted); font-size: 13px; }
+.steps li { display: flex; gap: 8px; align-items: baseline; }
+.steps b { font-family: var(--font-num); color: var(--fg); font-weight: 500; }
+
+.app { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 30vw, 384px); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .app { grid-template-columns: minmax(0, 1fr); } }
+.viewer { min-width: 0; display: grid; gap: 12px; }
+.controls { display: grid; gap: 12px; min-width: 0; }
+/* Wide screens: the title stays put and each column scrolls on its own. */
+@media (min-width: 761px) {
+  html, body { height: 100%; }
+  body { overflow: hidden; }
+  .wrap { height: 100%; display: flex; flex-direction: column; padding-block: 18px 0; }
+  .app { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  /* max-content rows: the column scrolls instead of squashing the picture or the thumbnails */
+  .viewer, .controls { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; align-content: start; grid-auto-rows: max-content; padding-bottom: 40px; }
+  .viewer { padding-right: 6px; }
+  .controls { padding-right: 4px; }
+}
+/* Phones: one column, with the settings before the notes. */
+@media (max-width: 760px) {
+  .viewer { display: contents; }
+  .controls { order: 1; }
+  .docs { order: 2; }
+}
+details.readings > summary { display: flex; justify-content: space-between; gap: 8px; padding: 7px 10px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--field); color: var(--fg); font-weight: 500; }
+details.readings[open] > summary { margin-bottom: 8px; }
+details.readings > div { display: grid; gap: 8px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--raise); border: 1px solid var(--line-2); border-radius: 6px; padding: 6px 11px; cursor: pointer; font-size: 13px; font-weight: 500; line-height: 1.3; color: var(--fg); }
+.btn:hover:not([disabled]) { border-color: var(--faint); }
+.btn.primary { background: var(--fg); color: var(--surround); border-color: var(--fg); }
+.btn.small { padding: 3px 8px; font-size: 12px; }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.chip { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; }
+.chip[data-state="account"] { color: var(--good); border-color: rgba(132,219,168,.35); }
+.chip[data-state="none"] { color: var(--warn); border-color: rgba(241,201,106,.35); }
+
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line-2); border-radius: 7px; padding: 2px; gap: 2px; background: var(--field); }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--raise); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line-2); }
+.seg button[disabled] { opacity: .4; cursor: not-allowed; }
+.seg.full { display: flex; }
+.seg.full button { flex: 1 1 auto; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.scaleinfo { font-size: 12px; color: var(--muted); font-family: var(--font-num); margin-left: auto; }
+.warnchip { font-size: 12px; color: var(--warn); border: 1px solid rgba(241,201,106,.4); padding: 3px 9px; border-radius: 999px; }
+
+.caps { display: flex; justify-content: space-between; align-items: center; gap: 6px 16px; flex-wrap: wrap; margin-inline: auto; max-width: 100%; }
+.cap { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; flex-wrap: wrap; }
+.cap .cn { font-weight: 600; }
+.cap .cs { border: 1px solid var(--line-2); border-radius: 999px; padding: 1px 9px; font-size: 12px; }
+.cap .cv { font-family: var(--font-num); color: var(--muted); font-size: 12.5px; }
+.caps[data-view="split"] .cap.b { justify-content: flex-end; }
+.caps[data-view="side"] { flex-wrap: nowrap; justify-content: flex-start; }
+.caps[data-view="flip"]:not([data-show="b"]) .cap.b, .caps[data-view="flip"][data-show="b"] .cap.a { opacity: .35; }
+.stage { position: relative; background: var(--surround); border-radius: 10px; display: grid; place-items: center; min-height: 220px; overflow: hidden; --split: 50%; }
+.stage[data-zoom="full"] { overflow: auto; place-items: start; max-height: 74vh; }
+.frame { position: relative; }
+.cell { position: relative; overflow: hidden; }
+.cell canvas { display: block; width: 100%; height: 100%; }
+.stage[data-view="split"] .cell, .stage[data-view="flip"] .cell { position: absolute; inset: 0; }
+.stage[data-view="split"] #cellB { clip-path: inset(0 0 0 var(--split)); }
+.stage[data-view="flip"]:not([data-show="b"]) #cellB { visibility: hidden; }
+.stage[data-view="flip"] .frame { cursor: pointer; }
+.stage[data-view="side"] .frame { display: flex; gap: 8px; }
+.tag { position: absolute; top: 10px; left: 10px; display: flex; gap: 8px; align-items: center; background: rgba(8,8,8,.74); border: 1px solid rgba(255,255,255,.09); padding: 4px 9px 4px 5px; border-radius: 6px; font-size: 12px; pointer-events: none; max-width: calc(100% - 20px); }
+.stage[data-view="split"] #cellB .tag { left: auto; right: 10px; }
+.tag .tn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tag .tv { font-family: var(--font-num); color: var(--muted); white-space: nowrap; }
+.badge { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 4px; font-family: var(--font-num); font-weight: 500; font-size: 12px; color: var(--surround); flex: none; vertical-align: -4px; }
+.badge.a { background: var(--a); }
+.badge.b { background: var(--b); }
+.ta { color: var(--a); }
+.tb { color: var(--b); }
+.divider { position: absolute; top: 0; bottom: 0; left: var(--split); width: 30px; margin-left: -15px; cursor: ew-resize; display: none; touch-action: none; z-index: 2; }
+.stage[data-view="split"] .divider { display: block; }
+.divider::before { content: ""; position: absolute; left: 14px; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.88); }
+.divider .grip { position: absolute; top: 50%; left: 50%; width: 24px; height: 44px; transform: translate(-50%, -50%); background: #f2f2f2; border-radius: 12px; box-shadow: 0 1px 8px rgba(0,0,0,.6); }
+.divider .grip::before { content: ""; position: absolute; inset: 14px 8px; border-left: 2px solid #777; border-right: 2px solid #777; }
+.probe { position: absolute; pointer-events: none; background: rgba(8,8,8,.9); border: 1px solid var(--line-2); border-radius: 6px; padding: 6px 9px; font-family: var(--font-num); font-size: 12px; line-height: 1.5; white-space: nowrap; z-index: 3; }
+.drop { position: absolute; inset: 8px; border: 2px dashed var(--faint); border-radius: 8px; display: grid; place-items: center; background: rgba(0,0,0,.66); font-size: 16px; z-index: 4; pointer-events: none; }
+.stagenote { font-size: 12.5px; color: var(--muted); max-width: 100ch; }
+
+.scenes { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.scene-wrap { position: relative; flex: none; }
+.scene { width: 150px; display: grid; gap: 5px; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; color: var(--muted); font-size: 12px; }
+.scene canvas { width: 150px; height: 84px; border-radius: 6px; display: block; background: var(--surround); border: 2px solid var(--line); }
+.scene[aria-pressed="true"] { color: var(--fg); }
+.scene[aria-pressed="true"] canvas { border-color: var(--fg); }
+.scene span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scene-add { flex: none; margin: 0; width: 150px; height: 84px; border: 1px dashed var(--line-2); border-radius: 6px; display: grid; place-items: center; text-align: center; color: var(--muted); font-size: 12.5px; cursor: pointer; padding: 6px; line-height: 1.3; }
+.scene-add:hover { border-color: var(--faint); color: var(--fg); }
+.scene { position: relative; }
+.hdrb { position: absolute; top: 6px; left: 6px; font: 600 10px/1 var(--font-num); background: var(--b); color: var(--surround); padding: 3px 5px; border-radius: 4px; letter-spacing: .04em; }
+.rm { position: absolute; top: 5px; right: 5px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-2); background: rgba(8,8,8,.8); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; color: var(--fg); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 10px; }
+.panel > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+label, .lbl { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+input[type=number], input[type=text], select, textarea { width: 100%; background: var(--field); border: 1px solid var(--line-2); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+input[type=number] { font-family: var(--font-num); font-size: 13px; }
+textarea { font-family: var(--font-num); font-size: 12.5px; resize: vertical; }
+input[disabled] { opacity: .45; }
+.suffix { display: flex; align-items: center; background: var(--field); border: 1px solid var(--line-2); border-radius: 6px; }
+.suffix input { border: 0; background: transparent; }
+.suffix span { padding-right: 8px; color: var(--faint); font-size: 12px; white-space: nowrap; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.grid2.typegain { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
+.check { display: flex; gap: 8px; align-items: center; color: var(--fg); font-size: 13px; margin: 0; cursor: pointer; }
+.hint { font-size: 12px; color: var(--faint); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row.between { justify-content: space-between; }
+details > summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+details[open] > summary { margin-bottom: 8px; }
+details.help { font-size: 12.5px; color: var(--muted); }
+details.help dl { margin: 0; display: grid; gap: 8px; }
+details.help dt { color: var(--fg); font-weight: 600; }
+details.help dd { margin: 0; }
+details.fine { border-top: 1px solid var(--line); padding-top: 8px; }
+details.fine > summary, details.help > summary { font-weight: 500; }
+details.fine .grid2 { gap: 8px 10px; }
+details.sub-details { margin-top: 10px; }
+input[type=range] { width: 100%; accent-color: var(--fg); margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { background: var(--field); border: 1px solid var(--line-2); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; font-family: var(--font-num); color: var(--muted); }
+.chips button:hover { color: var(--fg); }
+.derived { font-size: 12.5px; color: var(--muted); }
+
+.plist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pitem { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; display: grid; gap: 4px; background: var(--field); }
+.pitem.on { border-color: var(--faint); }
+.ptop { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.pname { font-weight: 600; overflow-wrap: anywhere; }
+.pmeta { font-family: var(--font-num); font-size: 12px; color: var(--muted); }
+.pill { font-family: var(--font-ui); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--warn); border: 1px solid rgba(241,201,106,.35); border-radius: 999px; padding: 0 6px; margin-left: 6px; font-weight: 500; vertical-align: 1px; }
+.pacts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.exnote { font-size: 12.5px; color: var(--muted); border: 1px dashed rgba(241,201,106,.35); border-radius: 6px; padding: 8px 10px; display: grid; gap: 6px; }
+
+.scard { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; background: var(--field); }
+.scard input[type=number], .scard input[type=text], .scard select, .scard .suffix { background: var(--panel); }
+.shead { display: flex; gap: 10px; align-items: center; }
+.shead strong { display: block; font-size: 14px; }
+.shead span.sub { font-size: 12px; color: var(--muted); }
+.gainout { font-family: var(--font-num); font-size: 13px; }
+
+.results { display: grid; gap: 12px; }
+.verdict { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 8px; }
+.verdict p { max-width: 86ch; }
+.verdict .math { font-family: var(--font-num); font-size: 12px; color: var(--faint); }
+.verdict .sure { font-size: 13px; color: var(--muted); }
+.lvl { display: inline-block; font-size: 12px; font-weight: 600; border: 1px solid; border-radius: 999px; padding: 0 9px; margin-right: 6px; }
+.lvl.high { color: var(--good); border-color: rgba(132,219,168,.45); }
+.lvl.good { color: var(--a); border-color: rgba(130,200,255,.45); }
+.lvl.rough { color: var(--warn); border-color: rgba(241,201,106,.45); }
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.rt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rt caption { text-align: left; padding: 10px 12px 2px; color: var(--faint); font-size: 12px; }
+.rt th, .rt td { padding: 7px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.rt tr:last-child th, .rt tr:last-child td { border-bottom: 0; }
+.rt th:first-child { text-align: left; color: var(--muted); font-weight: 500; white-space: normal; min-width: 150px; }
+.rt thead th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.rt td { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.rt .ca { color: var(--a); }
+.rt .cb { color: var(--b); }
+.rt .sec th { padding-top: 14px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+.rt tr.cur th, .rt tr.cur td { background: rgba(255,255,255,.035); }
+.up { color: var(--good); }
+.down { color: var(--bad); }
+.same { color: var(--muted); }
+.allp > summary { padding: 4px 2px; }
+
+.docs { margin-top: 40px; display: grid; gap: 16px; }
+.docs > header p { color: var(--muted); max-width: 80ch; margin-top: 6px; }
+.docs .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.docs article { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.docs h3 { margin-bottom: 10px; }
+.docs ul, .docs ol { margin: 0; padding-left: 18px; display: grid; gap: 7px; color: var(--muted); }
+.docs li b { color: var(--fg); font-weight: 600; }
+.docs code { font-family: var(--font-num); font-size: 12px; color: var(--fg); }
+
+dialog { background: var(--panel); color: var(--fg); border: 1px solid var(--line-2); border-radius: 10px; padding: 0; width: min(580px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+dialog::backdrop { background: rgba(0,0,0,.66); }
+.dlg { padding: 18px; display: grid; gap: 12px; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.err { color: var(--bad); font-size: 12.5px; min-height: 1em; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+legend { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; padding: 0; }
+.radios { display: flex; gap: 18px; flex-wrap: wrap; }
+.radios label { display: flex; gap: 6px; align-items: center; color: var(--fg); font-size: 13px; margin: 0; cursor: pointer; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--raise); border: 1px solid var(--line-2); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 50; max-width: calc(100vw - 32px); box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+@media (max-width: 520px) {
+  h1 { font-size: 25px; }
+  .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scaleinfo { margin-left: 0; }
+}
+ol.mini { margin: 0; padding-left: 18px; display: grid; gap: 10px; }
+ol.mini label { color: var(--fg); }
+details.extra > summary { font-weight: 500; }
+.extra-body { display: grid; gap: 12px; margin-top: 10px; }
+</style>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Screen Gain Simulator</h1>
+      <p>Compare how your projector would look on two screens, using your own measurements. It shows the difference between the screens, not exactly what you'll see in your room.</p>
+    </div>
+    <div class="top-actions">
+      <span class="chip" id="saveChip" data-state="local">Saved in this browser</span>
+      <button type="button" class="btn" id="backupBtn">Backup &amp; restore</button>
+      <button type="button" class="btn" id="saveImgBtn" hidden>Save image</button>
+    </div>
+  </header>
+  <ol class="steps">
+    <li><b>1</b> Add your meter readings</li>
+    <li><b>2</b> Pick your screen and the one you want</li>
+    <li><b>3</b> Choose a picture and compare</li>
+  </ol>
+
+  <main class="app">
+    <section class="viewer" aria-label="Comparison">
+      <div class="toolbar">
+        <div class="seg" id="contentSeg" role="group" aria-label="Content">
+          <button type="button" data-content="sdr">SDR</button>
+          <button type="button" data-content="hdr">HDR</button>
+        </div>
+        <div class="seg" id="viewSeg" role="group" aria-label="How to compare">
+          <button type="button" data-view="split">Split</button>
+          <button type="button" data-view="side">Side by side</button>
+          <button type="button" data-view="flip">Flip</button>
+        </div>
+        <div class="seg" id="zoomSeg" role="group" aria-label="Zoom">
+          <button type="button" data-zoom="fit">Fit</button>
+          <button type="button" data-zoom="full">Full size</button>
+        </div>
+        <button type="button" class="btn" id="flipBtn" hidden>Show B</button>
+        <span class="warnchip" id="clipChip" hidden></span>
+        <span class="scaleinfo" id="scaleInfo" hidden></span>
+      </div>
+
+      <div class="caps" id="caps" data-view="split">
+        <div class="cap a"><span class="badge a">A</span><span class="cn" id="capAName"></span><span class="cs" id="capASet"></span><span class="cv" id="capAVal"></span></div>
+        <div class="cap b"><span class="badge b">B</span><span class="cn" id="capBName"></span><span class="cs" id="capBSet"></span><span class="cv" id="capBVal"></span></div>
+      </div>
+      <div class="stage" id="stage" data-view="split" data-zoom="fit" tabindex="0" aria-label="The two screens. In Split, use the left and right arrow keys to move the line. In Flip, press Space to switch screens.">
+        <div class="frame" id="frame">
+          <div class="cell" id="cellA">
+            <canvas id="cvA" width="16" height="9"></canvas>
+          </div>
+          <div class="cell" id="cellB">
+            <canvas id="cvB" width="16" height="9"></canvas>
+          </div>
+          <div class="divider" id="divider" role="slider" tabindex="0" aria-label="Split line" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><span class="grip"></span></div>
+        </div>
+        <div class="probe" id="probe" hidden></div>
+        <div class="drop" id="drop" hidden>Drop images here to add them</div>
+      </div>
+      <p class="stagenote">This compares the two screens using your numbers. It isn't a preview of what you'll see in person: your monitor can't match a projector's size, brightness or darkness (OLED comes closest), and screen texture isn't shown. Trust the difference between A and B more than how either one looks. Point at any spot to see how bright it is.</p>
+
+      <span class="lbl" style="margin:0">Pick a picture</span>
+      <div class="scenes" id="scenes" aria-label="Pictures"></div>
+      <input type="file" id="fileIn" accept="image/png,image/jpeg,image/webp,image/avif,image/gif,image/bmp" multiple hidden>
+
+      <section class="results" aria-label="Results">
+        <div class="verdict" id="verdict"></div>
+        <div class="tablewrap"><table class="rt" id="rt"></table></div>
+        <details class="allp">
+          <summary>All your readings on both screens</summary>
+          <div class="tablewrap"><table class="rt" id="allp"></table></div>
+        </details>
+      </section>
+  <section class="docs" aria-labelledby="hDocs">
+    <header>
+      <h2 id="hDocs">How it works</h2>
+      <p>For every dot in the picture, the app works out how much light your projector really puts out, using your readings. It multiplies that light by the screen's gain, adds the ambient light, and shows both screens on your monitor using the same brightness scale. Think of it as photographing both screens with the same camera settings: it tells you truthfully which is brighter, by how much, and how room light affects each one, but it won't look the same as sitting in your room.</p>
+    </header>
+    <div class="cols">
+      <article>
+        <h3>What it calculates exactly</h3>
+        <ul>
+          <li><b>Higher gain brightens everything.</b> Going from 1.2 to 1.5 gain makes white, black and every shade in between 25% brighter.</li>
+          <li><b>In a dark room, contrast stays the same,</b> because black gets brighter by the same amount as white.</li>
+          <li><b>A bigger screen spreads the same light over more area.</b> Going from 120 to 150 inches makes the picture (120 ÷ 150)² = 0.64 times as bright, unless higher gain makes up for it.</li>
+          <li><b>Ambient light adds the same amount of light everywhere,</b> so it washes out dark scenes first. That's why blocking ambient light can matter more than gain in a bright room.</li>
+          <li><b>Both pictures use the same brightness scale,</b> so the difference you see between A and B is real.</li>
+          <li><b>Your own measured curve is used exactly</b> when you load a ColourSpace or CSV file, including shadows that are darker or brighter than the standard.</li>
+          <li><b>HDR uses the published standards:</b> PQ (ST 2084) for HDR brightness and the ITU reference tone-mapping curve (BT.2408) into your projector's real peak, worked out on the full picture so the preview size never changes it.</li>
+          <li><b>Checked independently.</b> A separate re-implementation of the formulas and tests of the pixels drawn on screen agree with the app. That shows the math is done correctly. How close the picture is to your room still depends on your readings and on the best guesses listed next.</li>
+        </ul>
+      </article>
+      <article>
+        <h3>Best guesses</h3>
+        <ul>
+          <li><b>Gain numbers</b> from screen makers are often a bit high. For the best result, measure a sample of the new screen (Screen B → Fine-tune). The "How sure" line under the picture tells you which numbers are measured and which are estimates.</li>
+          <li><b>Sitting to the side</b> uses one number per screen. Real screens vary a little.</li>
+          <li><b>Bigger screen:</b> if you zoom the lens to fill it, some projectors lose a little more light than the math shows.</li>
+          <li><b>Blocks ambient light</b> is one number. Real screens block light from the ceiling better than light from behind you.</li>
+          <li><b>Dynamic iris</b> is shown as a perfect iris that closes as much as each picture allows.</li>
+          <li><b>HDR tone mapping</b> uses the standard curve. Your projector or video processor (Lumagen, madVR and others) tone-maps in its own way, so bright parts can look a bit different.</li>
+          <li><b>Built-in HDR pictures</b> other than "HDR brightness steps" are SDR photos given an HDR grade by this app. Use your own HDR frame grabs for real HDR.</li>
+          <li><b>Not shown:</b> color changes caused by the screen, screen texture or sparkle, and HDR brightness above your monitor's white.</li>
+        </ul>
+      </article>
+      <article>
+        <h3>What depends on your monitor</h3>
+        <ul>
+          <li><b>Black.</b> OLED monitors and most phones can show true black, so dark scenes look right. Most other monitors show black as dark gray, which makes dark scenes look lighter than on a projector in a dark room. On those, compare A with B instead of judging how black it looks.</li>
+          <li><b>Real brightness.</b> Auto makes the brighter screen as bright as your monitor can go. To see real brightness, measure your monitor and choose Match my monitor.</li>
+          <li><b>Wide color.</b> On wide-color monitors (most Macs, OLEDs and newer laptops) the app shows HDR colors beyond sRGB. On standard monitors those colors are clipped.</li>
+          <li><b>How your eyes adjust.</b> In a dark room your eyes get used to one screen, so the difference can feel smaller than it does here.</li>
+          <li><b>Closest look.</b> Use an OLED monitor in a dark room, choose Match my monitor, load your own readings, measure a sample of the new screen, and compare with screenshots from movies you watch.</li>
+          <li><b>Pictures.</b> The people pictures are AI-made photos. For the best test, add screenshots from movies you watch (not HDR screenshots).</li>
+        </ul>
+      </article>
+      <article>
+        <h3>How to take readings</h3>
+        <ol>
+          <li>Turn the projector on 20–30 minutes early, in the picture mode you watch with.</li>
+          <li>Sit in your main seat and point your meter at the middle of the screen.</li>
+          <li>Show an all-white picture and write down the number. That's your <b>White</b> reading.</li>
+          <li>Show an all-black picture and write down the number. That's your <b>Black</b> reading.</li>
+          <li>Do this for each setting (Iris 2, Iris 3 and so on) and save each one as a reading. You can save up to 10.</li>
+          <li>Dynamic iris: measure the all-black picture with it on, and again with it off.</li>
+          <li>Ambient light: see "How do I measure it?" in the Ambient light panel.</li>
+        </ol>
+      </article>
+    </div>
+  </section>
+    </section>
+
+    <aside class="controls" aria-label="Settings">
+      <section class="panel" aria-labelledby="hMeas">
+        <header><h2 id="hMeas">Your projector readings</h2>
+          <div class="seg" id="unitSeg" role="group" aria-label="Units">
+            <button type="button" data-units="nits">nits</button>
+            <button type="button" data-units="ftl">ftL</button>
+          </div>
+        </header>
+        <div id="linkedProf">
+          <label for="profSel">Projector setting</label>
+          <select id="profSel"></select>
+        </div>
+        <div class="grid2" id="splitProf" hidden>
+          <div><label for="profSelA"><span class="ta">A</span> setting</label><select id="profSelA"></select></div>
+          <div><label for="profSelB"><span class="tb">B</span> setting</label><select id="profSelB"></select></div>
+        </div>
+        <label class="check"><input type="checkbox" id="unlink"> Use a different setting on A and B</label>
+        <p class="hint">Measure on your current screen (A). Add one reading for each setting you use, like Iris 2 and Iris 3.</p>
+        <details class="readings" id="readList">
+          <summary><span>Edit or add readings</span><span class="hint" id="profCount"></span></summary>
+          <div>
+            <div class="exnote" id="exNote" hidden>
+              <span>Readings marked Example are samples. Change them or add your own.</span>
+              <span><button type="button" class="btn small" id="clearEx">Remove examples</button></span>
+            </div>
+            <ul class="plist" id="plist"></ul>
+            <div><button type="button" class="btn" id="addProf">Add a reading</button></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="panel" id="hdrPanel" aria-labelledby="hHdr" hidden>
+        <header><h2 id="hHdr">HDR</h2></header>
+        <div>
+          <label for="hdrTm">Tone mapping</label>
+          <select id="hdrTm">
+            <option value="dynamic">Dynamic (adjusts to each picture)</option>
+            <option value="static1000">Fixed, for 1,000-nit movies</option>
+            <option value="static4000">Fixed, for 4,000-nit movies</option>
+          </select>
+        </div>
+        <div>
+          <span class="lbl">On screen B, tone mapping is</span>
+          <div class="seg full" id="hdrBSeg" role="group" aria-label="Tone mapping on screen B">
+            <button type="button" data-bmode="retuned">Set up for B</button>
+            <button type="button" data-bmode="same">Same as A</button>
+          </div>
+          <p class="hint" style="margin-top:6px">"Set up for B" is what you get after recalibrating for the new screen. "Same as A" is what you get if you change nothing.</p>
+        </div>
+        <div id="pqRow" hidden>
+          <label class="check"><input type="checkbox" id="isPQ"> This picture is an HDR frame grab (PQ, BT.2020)</label>
+          <div style="margin-top:8px"><label for="pqRange">Video levels</label><select id="pqRange"><option value="full">Full (most frame grabs)</option><option value="limited">Limited</option></select></div>
+        </div>
+        <details class="help">
+          <summary>Fine-tune</summary>
+          <label for="hdrTarget">Tone-mapping target</label>
+          <div class="suffix" style="max-width:200px"><input type="number" id="hdrTarget" min="20" max="4000" step="any" placeholder="your peak"><span>nits</span></div>
+          <p class="hint" style="margin-top:4px">Leave blank to use your measured peak. Many people set it lower than their real peak to make HDR brighter overall.</p>
+        </details>
+        <details class="help">
+          <summary>How is HDR shown?</summary>
+          <p>Each pixel's HDR brightness (PQ, in nits) is fitted into your projector's real peak with the ITU reference tone-mapping curve (BT.2408, first published in BT.2390), keeping each color's hue. The "HDR brightness steps" picture and your own HDR frame grabs (16-bit PNG) are real HDR. The other built-in pictures are SDR photos given an HDR grade by this app: white at 203 nits and highlights up to 1,000 nits.</p>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="hScreens">
+        <header><h2 id="hScreens">Screens</h2></header>
+        <div class="scard">
+          <div class="shead"><span class="badge a">A</span><div><strong>Your screen</strong><span class="sub">The one you have now</span></div></div>
+          <div><label for="aPreset">Screen type</label><select id="aPreset"></select></div>
+          <div class="grid2">
+            <div><label for="aGain">Gain</label><input type="number" id="aGain" min="0.1" max="5" step="0.05"></div>
+            <div><label for="aSize">Size</label><div class="suffix"><input type="number" id="aSize" min="40" max="400" step="1"><span>inches</span></div></div>
+          </div>
+          <details class="fine" id="aFine">
+            <summary>Fine-tune</summary>
+            <div style="margin-bottom:8px"><label for="aName">Name</label><input type="text" id="aName" maxlength="40"></div>
+            <div class="grid2">
+              <div><label for="aRej">Blocks ambient light</label><div class="suffix"><input type="number" id="aRej" min="0" max="95" step="1"><span>%</span></div></div>
+              <div><label for="aHalf">Half as bright at</label><div class="suffix"><input type="number" id="aHalf" min="0" max="90" step="1"><span>° to the side</span></div></div>
+            </div>
+            <details class="sub-details">
+              <summary>Check your screen's real gain</summary>
+              <p class="hint" style="margin:6px 0 8px">Put an all-white picture on the screen, then take two readings:</p>
+              <ol class="mini">
+                <li><label for="gainLux">Hold the meter flat against the screen, pointing back at the projector</label><div class="suffix"><input type="number" id="gainLux" min="0" step="any"><span id="gainLuxU">lux</span></div></li>
+                <li><label for="gainLum">Sit in your seat and point the meter at the screen</label><div class="suffix"><input type="number" id="gainLum" min="0" step="any"><span class="u">nits</span></div></li>
+              </ol>
+              <div class="row between" style="margin-top:8px">
+                <span class="gainout" id="gainOut">Enter both readings</span>
+                <button type="button" class="btn small" id="gainUse" disabled>Use this gain</button>
+              </div>
+              <p class="hint" style="margin-top:6px">Screen makers often round their gain up, so the screen you want may be a little dimmer than its number says.</p>
+            </details>
+          </details>
+        </div>
+
+        <div class="scard">
+          <div class="shead"><span class="badge b">B</span><div><strong>Screen you want</strong><span class="sub">Same projector, same settings</span></div></div>
+          <div><label for="bPreset">Screen type</label><select id="bPreset"></select></div>
+          <div class="grid2">
+            <div><label for="bGain">Gain</label><input type="number" id="bGain" min="0.1" max="5" step="0.05"></div>
+            <div><label for="bSize">Size</label><div class="suffix"><input type="number" id="bSize" min="40" max="400" step="1"><span>inches</span></div></div>
+          </div>
+          <details class="fine" id="bFine">
+            <summary>Fine-tune</summary>
+            <div style="margin-bottom:8px"><label for="bName">Name</label><input type="text" id="bName" maxlength="40"></div>
+            <div class="grid2">
+              <div><label for="bRej">Blocks ambient light</label><div class="suffix"><input type="number" id="bRej" min="0" max="95" step="1"><span>%</span></div></div>
+              <div><label for="bHalf">Half as bright at</label><div class="suffix"><input type="number" id="bHalf" min="0" max="90" step="1"><span>° to the side</span></div></div>
+            </div>
+            <details class="sub-details">
+              <summary>Measure a sample of this screen</summary>
+              <p class="hint" style="margin:6px 0 8px">Got a small sample of this screen? Tape it to the middle of your screen. Sit in your seat, point the meter at the screen, and take these readings:</p>
+              <ol class="mini">
+                <li><label for="smpWA">All-white picture: your screen, right next to the sample</label><div class="suffix"><input type="number" id="smpWA" min="0" step="any"><span class="u">nits</span></div></li>
+                <li><label for="smpWB">All-white picture: the sample</label><div class="suffix"><input type="number" id="smpWB" min="0" step="any"><span class="u">nits</span></div></li>
+                <li><label for="smpLA">Projector off, lights on: your screen (optional)</label><div class="suffix"><input type="number" id="smpLA" min="0" step="any"><span class="u">nits</span></div></li>
+                <li><label for="smpLB">Projector off, lights on: the sample (optional)</label><div class="suffix"><input type="number" id="smpLB" min="0" step="any"><span class="u">nits</span></div></li>
+              </ol>
+              <div class="row between" style="margin-top:8px">
+                <span class="gainout" id="smpOut">Enter the two white readings</span>
+                <button type="button" class="btn small" id="smpUse" disabled>Use these</button>
+              </div>
+            </details>
+          </details>
+        </div>
+        <details class="help">
+          <summary>What do these mean?</summary>
+          <dl>
+            <dt>Gain</dt><dd>How much light the screen bounces back to you. A 1.5 screen is 25% brighter than a 1.2 screen (1.5 ÷ 1.2 = 1.25).</dd>
+            <dt>Size</dt><dd>The screen's diagonal in inches. A bigger screen spreads the same light over more area, so it looks dimmer.</dd>
+            <dt>Screen type</dt><dd>Fills in typical numbers for that kind of screen. Open Fine-tune to type in your screen's exact numbers.</dd>
+            <dt>Blocks ambient light</dt><dd>How much lamp and window light the screen keeps off the picture. A plain white screen is 0%. Only matters when ambient light is on.</dd>
+            <dt>Half as bright at</dt><dd>How far to the side you can sit before the picture looks half as bright. 0 means it looks the same from every seat. Only matters when you sit to the side.</dd>
+          </dl>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="hRoom">
+        <header><h2 id="hRoom">Ambient light</h2></header>
+        <div>
+          <label for="ambNum">Lamp or window light hitting your screen</label>
+          <div class="grid2" style="align-items:center">
+            <input type="range" id="ambRange" min="0" max="1000" step="1" aria-label="Ambient light slider">
+            <div class="suffix"><input type="number" id="ambNum" min="0" step="any"><span class="u">nits</span></div>
+          </div>
+        </div>
+        <p class="derived" id="ambDerived"></p>
+        <details class="help">
+          <summary>How do I measure it?</summary>
+          <p>Turn the projector off. Set your lights the way you usually watch. Sit in your seat, point the meter at the screen, and type in the number.</p>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="hSeat">
+        <header><h2 id="hSeat">Where you sit</h2></header>
+        <div>
+          <label for="seat">How far to the side you sit: <output id="seatOut" class="ta" style="font-family:var(--font-num)">0° · 0 ft</output></label>
+          <input type="range" id="seat" min="0" max="60" step="1">
+        </div>
+        <div>
+          <label for="geoDist">How far back you sit (from the screen)</label>
+          <div class="suffix" style="max-width:200px"><input type="number" id="geoDist" min="0.5" max="100" step="0.5"><select id="geoDistU" aria-label="Distance unit" style="width:auto;min-width:3.6em;border:0;background:transparent;padding:4px 6px"><option value="ft">ft</option><option value="m">m</option></select></div>
+        </div>
+        <p class="hint">0° means straight in front. Sitting to the side makes a screen dimmer, and higher-gain screens get dimmer faster.</p>
+        <details class="help">
+          <summary>More detail</summary>
+          <label class="check" style="margin-bottom:8px"><input type="checkbox" id="geoOn"> Show which parts of the screen look brighter</label>
+          <div class="grid2" id="geoBox" hidden>
+            <div><label for="geoAspect">Shape</label><select id="geoAspect"><option value="16:9">16:9</option><option value="2.39">2.39:1</option></select></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="hMon">
+        <header><h2 id="hMon">Your monitor</h2></header>
+        <div class="seg full" id="dispSeg" role="group" aria-label="Brightness">
+          <button type="button" data-mode="auto">Auto (recommended)</button>
+          <button type="button" data-mode="fixed">Match my monitor</button>
+        </div>
+        <div id="monBox" hidden>
+          <label for="monNits">Your monitor's brightness: show an all-white page and measure it with your meter</label>
+          <div class="suffix"><input type="number" id="monNits" min="1" step="any"><span class="u">nits</span></div>
+        </div>
+        <p class="hint" id="dispInfo"></p>
+      </section>
+    </aside>
+  </main>
+
+</div>
+
+<dialog id="profDlg" aria-labelledby="profDlgTitle">
+  <form class="dlg" id="profForm" novalidate>
+    <h3 id="profDlgTitle">Edit reading</h3>
+    <p class="hint">Measure on screen A from your seat, with the meter pointed at the screen.</p>
+    <div class="row">
+      <label class="btn small" for="pFile" style="margin:0">Load from a measurement file…</label>
+      <input type="file" id="pFile" accept=".bcs,.xml,.csv,.txt" hidden>
+      <span class="hint" id="pFileInfo">ColourSpace (.bcs) or a CSV of gray readings</span>
+    </div>
+    <div><label for="pName">Name</label><input type="text" id="pName" maxlength="40" placeholder="e.g. Iris 3"></div>
+    <div class="grid2">
+      <div><label for="pWhite">White (all-white picture)</label><div class="suffix"><input type="number" id="pWhite" min="0" step="any"><span class="u">nits</span></div></div>
+      <div><label for="pBlack" id="pBlackLbl">Black (all-black picture)</label><div class="suffix"><input type="number" id="pBlack" min="0" step="any"><span class="u">nits</span></div></div>
+    </div>
+    <fieldset>
+      <legend>Iris</legend>
+      <div class="radios">
+        <label><input type="radio" name="pIris" value="fixed" checked> Normal</label>
+        <label><input type="radio" name="pIris" value="dynamic"> Dynamic</label>
+      </div>
+    </fieldset>
+    <div id="pDynBox" hidden>
+      <label for="pBlackOpen">Black, with dynamic iris turned off</label>
+      <div class="suffix"><input type="number" id="pBlackOpen" min="0" step="any"><span class="u">nits</span></div>
+      <p class="hint" style="margin-top:4px">Measure the all-black picture twice: once with the dynamic iris on (box above) and once with it off (this box).</p>
+    </div>
+    <details class="extra">
+      <summary>Extra readings (optional)</summary>
+      <div class="extra-body">
+        <div>
+          <label for="pTone">Brightness curve</label>
+          <select id="pTone">
+            <option value="bt1886">Standard (BT.1886, most calibrated projectors)</option>
+            <option value="gamma">A gamma number</option>
+            <option value="table">My own grayscale readings</option>
+          </select>
+        </div>
+        <div id="pGammaBox" hidden><label for="pGamma">Gamma</label><input type="number" id="pGamma" min="1.5" max="3.2" step="0.05"></div>
+        <div id="pTableBox" hidden>
+          <label for="pTable">Grayscale readings, one per line: percent, then reading</label>
+          <textarea id="pTable" rows="7" spellcheck="false" placeholder="0, 0.03&#10;10, 0.55&#10;20, 2.4&#10;30, 5.9&#10;…&#10;100, 100"></textarea>
+          <p class="hint" id="pTableInfo" style="margin-top:4px">You can paste these from Calman or HCFR.</p>
+        </div>
+        <div class="grid2">
+          <div><label for="pAnsi">Checkerboard contrast (ANSI)</label><div class="suffix"><input type="number" id="pAnsi" min="1" step="any" placeholder="e.g. 300"><span>:1</span></div></div>
+          <div><label for="pNotes">Notes</label><input type="text" id="pNotes" maxlength="300"></div>
+        </div>
+      </div>
+    </details>
+    <p class="err" id="pErr" role="alert"></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn" id="pCancel">Cancel</button>
+      <button type="submit" class="btn primary">Save reading</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dataDlg" aria-labelledby="dataTitle">
+  <div class="dlg">
+    <h3 id="dataTitle">Backup &amp; restore</h3>
+    <p class="hint">Save your readings and screen settings so you can use them on another device or share them.</p>
+    <div class="row">
+      <button type="button" class="btn" id="dlBackup" hidden>Download backup file</button>
+      <button type="button" class="btn" id="copyBackup">Copy as text</button>
+    </div>
+    <div><label for="backupText">Backup as text</label><textarea id="backupText" rows="8" spellcheck="false"></textarea></div>
+    <div class="row">
+      <label class="btn" for="restoreFile" style="margin:0">Load a backup file…</label>
+      <input type="file" id="restoreFile" accept=".json,application/json,text/plain" hidden>
+      <button type="button" class="btn" id="restoreText">Load from the text above</button>
+    </div>
+    <div id="restoreMsg" class="row" hidden></div>
+    <div class="dlg-actions"><button type="button" class="btn" id="dataClose">Close</button></div>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+(() => {
+'use strict';
+// ---------- constants & helpers
+const FTL = 3.42625909;           // 1 foot-lambert in cd/m²
+const MAXP = 10;
+const GAP = 8;
+const LW = [0.2126, 0.7152, 0.0722]; // BT.709 luminance weights
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const inClaude = !!(window.claude && typeof window.claude.use === 'function');
+
+const PRESETS = [
+  { id: 'fresnel12', name: 'Fresnel ALR 1.2', gain: 1.2, rej: 75, half: 40, lobe: 'aimed' },
+  { id: 'fresnel15', name: 'Fresnel ALR 1.5', gain: 1.5, rej: 75, half: 32, lobe: 'aimed' },
+  { id: 'matte10', name: 'Matte white 1.0', gain: 1.0, rej: 0, half: 0, lobe: 'even' },
+  { id: 'white13', name: 'High-gain white 1.3', gain: 1.3, rej: 0, half: 45, lobe: 'mirror' },
+  { id: 'grey08', name: 'Grey ALR 0.8', gain: 0.8, rej: 50, half: 35, lobe: 'mirror' },
+];
+const LOBES = { aimed: 'Toward the seats (Fresnel)', mirror: 'Like a dull mirror (grey, silver)', even: 'Evenly (matte white)' };
+
+function exampleProfiles() {
+  const base = { iris: 'fixed', blackOpen: null, tone: 'bt1886', gamma: 2.4, table: [], ansi: null, notes: '', example: true };
+  return [
+    { ...base, id: 'ex2', name: 'Iris 2', white: 78, black: 0.019 },
+    { ...base, id: 'ex3', name: 'Iris 3', white: 100, black: 0.030 },
+    { ...base, id: 'ex4', name: 'Iris 4', white: 124, black: 0.045 },
+    { ...base, id: 'exd', name: 'Iris 4, dynamic', white: 124, black: 0.0045, iris: 'dynamic', blackOpen: 0.045 },
+  ];
+}
+function defaults() {
+  const p = PRESETS;
+  return {
+    v: 1, units: 'nits', profiles: exampleProfiles(), profA: 'ex3', profB: 'ex3', linked: true,
+    screenA: { preset: p[0].id, name: p[0].name, gain: p[0].gain, rej: p[0].rej, half: p[0].half, lobe: p[0].lobe, size: 120 },
+    screenB: { preset: p[1].id, name: p[1].name, gain: p[1].gain, rej: p[1].rej, half: p[1].half, lobe: p[1].lobe, size: 120 },
+    ambient: 0, cct: 6500, seat: 0,
+    geo: { on: false, diag: 120, aspect: '16:9', dist: 12, distUnit: 'ft' },
+    display: { mode: 'auto', monitor: 200 },
+    view: 'split', zoom: 'fit', split: 0.5, scene: 'street',
+    content: 'sdr', hdr: { tm: 'dynamic', bMode: 'retuned', target: null },
+  };
+}
+
+function sanitizeProfile(p) {
+  p = p || {};
+  const opt = v => (v === null || v === undefined || v === '' || !isFinite(+v)) ? null : +v;
+  const o = {
+    id: String(p.id || uid()).slice(0, 40), name: String(p.name || 'Profile').slice(0, 40),
+    white: +p.white, black: +p.black, iris: p.iris === 'dynamic' ? 'dynamic' : 'fixed', blackOpen: opt(p.blackOpen),
+    tone: ['bt1886', 'gamma', 'table'].includes(p.tone) ? p.tone : 'bt1886', gamma: clamp(+p.gamma || 2.4, 1.5, 3.2),
+    table: Array.isArray(p.table) ? p.table.filter(a => Array.isArray(a) && a.length >= 2 && isFinite(a[0]) && isFinite(a[1])).map(a => [+a[0], +a[1]]).slice(0, 128) : [],
+    ansi: opt(p.ansi), notes: String(p.notes || '').slice(0, 300), example: !!p.example,
+  };
+  if (!(o.white > 0)) o.white = 100;
+  if (!(o.black > 0) || o.black >= o.white) o.black = o.white / 2000;
+  if (!(o.iris === 'dynamic' && o.blackOpen >= o.black && o.blackOpen < o.white)) o.blackOpen = null;
+  if (!(o.ansi > 1)) o.ansi = null;
+  return o;
+}
+function sanitizeScreen(s, d) {
+  s = s || {};
+  const n = (v, def) => (v === null || v === undefined || v === '' || !isFinite(+v)) ? def : +v;
+  return {
+    preset: typeof s.preset === 'string' ? s.preset : d.preset, name: String(s.name ?? d.name).slice(0, 40),
+    gain: clamp(n(s.gain, d.gain), 0.1, 5), rej: clamp(n(s.rej, d.rej), 0, 95), half: clamp(n(s.half, d.half), 0, 90),
+    size: clamp(n(s.size, d.size), 40, 400),
+    lobe: LOBES[s.lobe] ? s.lobe : d.lobe,
+    gainMeasured: !!s.gainMeasured, rejMeasured: !!s.rejMeasured,
+  };
+}
+function applyState(o) {
+  const d = defaults();
+  if (!o || typeof o !== 'object') return d;
+  const n = d;
+  n.units = o.units === 'ftl' ? 'ftl' : 'nits';
+  const profs = Array.isArray(o.profiles) ? o.profiles.slice(0, MAXP).map(sanitizeProfile) : [];
+  if (profs.length) n.profiles = profs;
+  const seen = new Set();
+  n.profiles.forEach(p => { while (seen.has(p.id)) p.id = uid(); seen.add(p.id); });
+  const has = id => n.profiles.some(p => p.id === id);
+  n.linked = o.linked !== false;
+  n.profA = has(o.profA) ? o.profA : n.profiles[Math.min(1, n.profiles.length - 1)].id;
+  n.profB = has(o.profB) ? o.profB : n.profA;
+  n.screenA = sanitizeScreen(o.screenA, d.screenA);
+  n.screenB = sanitizeScreen(o.screenB, d.screenB);
+  n.ambient = clamp(+o.ambient || 0, 0, 1000);
+  n.cct = 6500;
+  n.seat = clamp(+o.seat || 0, 0, 60);
+  const g = o.geo || {};
+  n.geo = { on: !!g.on, diag: clamp(+g.diag || 120, 40, 400), aspect: g.aspect === '2.39' ? '2.39' : '16:9', dist: clamp(+g.dist || 12, 0.5, 100), distUnit: g.distUnit === 'm' ? 'm' : 'ft' };
+  const dp = o.display || {};
+  n.display = { mode: dp.mode === 'fixed' ? 'fixed' : 'auto', monitor: clamp(+dp.monitor || 200, 1, 10000) };
+  n.view = ['split', 'side', 'flip'].includes(o.view) ? o.view : 'split';
+  n.zoom = o.zoom === 'full' ? 'full' : 'fit';
+  n.split = clamp(isFinite(+o.split) ? +o.split : 0.5, 0, 1);
+  n.scene = typeof o.scene === 'string' ? o.scene : d.scene;
+  n.content = o.content === 'hdr' ? 'hdr' : 'sdr';
+  const h = o.hdr || {};
+  n.hdr = { tm: ['dynamic', 'static1000', 'static4000'].includes(h.tm) ? h.tm : 'dynamic', bMode: h.bMode === 'same' ? 'same' : 'retuned', target: +h.target >= 20 && +h.target <= 4000 ? +h.target : null };
+  return n;
+}
+
+// ---------- units & formatting
+let S = defaults();
+const U = () => S.units === 'ftl' ? 'ftL' : 'nits';
+const toU = n => S.units === 'ftl' ? n / FTL : n;
+const fromU = v => S.units === 'ftl' ? v * FTL : v;
+function num(v) {
+  if (!isFinite(v)) return '—';
+  const a = Math.abs(v);
+  if (a >= 1000) return Math.round(v).toLocaleString('en-US');
+  if (a >= 100) return v.toFixed(0);
+  if (a >= 10) return v.toFixed(1);
+  if (a >= 1) return v.toFixed(2);
+  if (a === 0) return '0';
+  return String(Number(v.toPrecision(2)));
+}
+const fmtL = nits => num(toU(nits));
+const inVal = nits => String(Number(toU(nits).toPrecision(4)));
+function ratio(r) {
+  if (!isFinite(r) || r <= 0) return '—';
+  return (r >= 100 ? Math.round(r).toLocaleString('en-US') : r.toFixed(r >= 10 ? 0 : 1)) + ':1';
+}
+const fmtG = g => String(Number((+g).toFixed(2)));
+const pctTxt = f => (f * 100 < 0.1 && f > 0 ? '<0.1' : (f * 100).toFixed(f * 100 < 10 ? 1 : 0)) + '%';
+
+// ---------- persistence (browser storage, plus the viewer's private store when signed in)
+const LS_KEY = 'screen-gain-sim.v1';
+const store = { ref: null, readonly: false, chain: Promise.resolve(), t: 0, dirty: false };
+function saveObj() {
+  return { v: 1, units: S.units, profiles: S.profiles, profA: S.profA, profB: S.profB, linked: S.linked, screenA: S.screenA, screenB: S.screenB,
+    ambient: S.ambient, cct: S.cct, seat: S.seat, geo: S.geo, display: S.display, view: S.view, zoom: S.zoom, split: S.split, content: S.content, hdr: S.hdr,
+    scene: S.scene.startsWith('u_') ? 'street' : S.scene };
+}
+function loadLocal() { try { const t = localStorage.getItem(LS_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+function saveLocal(obj) { try { localStorage.setItem(LS_KEY, JSON.stringify(obj || saveObj())); return true; } catch (e) { return false; } }
+function setChip(state) {
+  const c = $('saveChip');
+  c.dataset.state = state;
+  c.textContent = state === 'account' ? 'Saved to your account' : state === 'local' ? 'Saved in this browser' : 'Not saved: use Backup';
+}
+function persist() { store.dirty = true; clearTimeout(store.t); store.t = setTimeout(flush, 600); }
+function flush() {
+  const obj = saveObj();
+  const okL = saveLocal(obj);
+  if (store.ref && !store.readonly) {
+    store.chain = store.chain.then(() => store.ref.set(obj)).then(() => setChip('account'), e => {
+      if (e && ['invalid_argument', 'not_granted', 'revoked', 'capability_disabled', 'capability_removed', 'quota_exceeded'].includes(e.code)) store.readonly = true;
+      setChip(okL ? 'local' : 'none');
+    });
+  } else setChip(okL ? 'local' : 'none');
+}
+async function connectAccount() {
+  if (!inClaude) return;
+  try {
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const id = await user.id();
+    if (!id) return;
+    // Only claim account saving when this visitor can actually write there.
+    // false: view-only or outside visitor, so keep saving in the browser.
+    // null: the platform didn't say, so the first save decides.
+    const canWrite = await Promise.resolve(user.can('data.write')).catch(() => null);
+    const ref = db.doc('data/users/' + id + '/workspace');
+    const snap = await ref.get();
+    store.ref = ref;
+    if (canWrite === false) store.readonly = true;
+    if (snap.exists && !store.dirty) {
+      const d = snap.data();
+      if (d && Array.isArray(d.profiles) && d.profiles.length) {
+        S = applyState({ ...d, view: S.view, zoom: S.zoom, scene: S.scene, split: S.split });
+        saveLocal();
+        refreshAll();
+      }
+    } else if (store.dirty && !store.readonly) flush();
+    if (canWrite === true || (canWrite === null && snap.exists)) setChip('account');
+  } catch (e) { store.ref = null; }
+}
+
+/* SGS-ENGINE-BEGIN
+   Pure math for the simulation: no DOM, no app state. Every function takes what it needs.
+   The test kit extracts the text between SGS-ENGINE-BEGIN and SGS-ENGINE-END and runs it in Node. */
+const SGS = (() => {
+  const cl = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  // ---- 3×3 matrices
+  function inv3(m) {
+    const [a, b, c] = m[0], [d, e, f] = m[1], [g, h, i] = m[2];
+    const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g, det = a * A + b * B + c * C;
+    return [[A / det, -(b * i - c * h) / det, (b * f - c * e) / det],
+      [B / det, (a * i - c * g) / det, -(a * f - c * d) / det],
+      [C / det, -(a * h - b * g) / det, (a * e - b * d) / det]];
+  }
+  const mul33 = (a, b) => a.map(r => [0, 1, 2].map(c => r[0] * b[0][c] + r[1] * b[1][c] + r[2] * b[2][c]));
+  const mul3 = (m, v) => m.map(r => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+
+  // ---- color spaces, all with a D65 white (ITU-R BT.709, SMPTE EG 432-1 Display P3, ITU-R BT.2020)
+  const D65 = [0.3127, 0.3290];
+  const PRIMARIES = {
+    bt709: [[0.640, 0.330], [0.300, 0.600], [0.150, 0.060]],
+    p3: [[0.680, 0.320], [0.265, 0.690], [0.150, 0.060]],
+    bt2020: [[0.708, 0.292], [0.170, 0.797], [0.131, 0.046]],
+  };
+  // Linear RGB → CIE XYZ (Y of white = 1), derived from the chromaticities (SMPTE RP 177 method).
+  function rgbToXYZ(prims, white = D65) {
+    const xyz = ([x, y]) => [x / y, 1, (1 - x - y) / y];
+    const cols = prims.map(xyz), P = [0, 1, 2].map(r => [0, 1, 2].map(c => cols[c][r]));
+    const S = mul3(inv3(P), xyz(white));
+    return P.map(row => row.map((v, c) => v * S[c]));
+  }
+  const TO_XYZ = { bt709: rgbToXYZ(PRIMARIES.bt709), p3: rgbToXYZ(PRIMARIES.p3), bt2020: rgbToXYZ(PRIMARIES.bt2020) };
+  const convert = (from, to) => mul33(inv3(TO_XYZ[to]), TO_XYZ[from]);
+  const lumaWeights = space => TO_XYZ[space][1].slice();
+
+  // ---- transfer functions
+  // sRGB and Display P3 share this encoding (IEC 61966-2-1).
+  const srgbEncode = l => l <= 0.0031308 ? 12.92 * l : 1.055 * Math.pow(l, 1 / 2.4) - 0.055;
+  // SMPTE ST 2084 (PQ)
+  const PQ = { m1: 2610 / 16384, m2: 2523 / 4096 * 128, c1: 3424 / 4096, c2: 2413 / 4096 * 32, c3: 2392 / 4096 * 32 };
+  function pqToNits(E) {
+    if (!(E > 0)) return 0;
+    const p = Math.pow(Math.min(E, 1), 1 / PQ.m2);
+    return 10000 * Math.pow(Math.max(p - PQ.c1, 0) / (PQ.c2 - PQ.c3 * p), 1 / PQ.m1);
+  }
+  function nitsToPq(L) {
+    if (!(L > 0)) return 0;
+    const y = Math.pow(Math.min(L, 10000) / 10000, PQ.m1);
+    return Math.pow((PQ.c1 + PQ.c2 * y) / (1 + PQ.c3 * y), PQ.m2);
+  }
+  // ITU reference EETF (ITU-R BT.2408-8 Annex 5; first published in BT.2390-4 §5.4.1), in the PQ domain.
+  // Departure: for targets below one third of the source range (in PQ) the knee KS would go negative; it is held at 0
+  // and the output is capped at the target, so the curve stays monotonic and never exceeds the target.
+  function eetf(E, srcMaxE, dstMaxE, srcMinE = 0, dstMinE = 0) {
+    const span = srcMaxE - srcMinE;
+    if (!(span > 0)) return E;
+    const E1 = cl((E - srcMinE) / span, 0, 1);
+    const minLum = (dstMinE - srcMinE) / span, maxLum = (dstMaxE - srcMinE) / span;
+    const KS = Math.max(0, 1.5 * maxLum - 0.5);
+    let E2 = E1;
+    if (KS < 1 && E1 >= KS) {
+      const T = (E1 - KS) / (1 - KS), T2 = T * T, T3 = T2 * T;
+      E2 = (2 * T3 - 3 * T2 + 1) * KS + (T3 - 2 * T2 + T) * (1 - KS) + (-2 * T3 + 3 * T2) * maxLum;
+    }
+    if (E2 > maxLum) E2 = maxLum;
+    const E3 = minLum > 0 ? E2 + minLum * Math.pow(1 - E2, 4) : E2;
+    return E3 * span + srcMinE;
+  }
+  // Tone curve as a table: output nits for PQ input i/(size-1), mapping srcMax → target.
+  function toneLUT(srcMaxNits, targetNits, size = 4096) {
+    const lut = new Float32Array(size);
+    const sE = nitsToPq(srcMaxNits), dE = nitsToPq(targetNits), pass = targetNits >= srcMaxNits;
+    for (let i = 0; i < size; i++) {
+      const E = i / (size - 1);
+      lut[i] = pass ? Math.min(pqToNits(E), targetNits) : pqToNits(eetf(Math.min(E, sE), sE, dE));
+    }
+    return lut;
+  }
+  // The app's own HDR grade for SDR pictures: 100% SDR white → 203 nits (ITU-R BT.2408 HDR reference white),
+  // values above 80% of SDR peak are expanded smoothly so SDR peak white lands at 1,000 nits.
+  const GRADE = { white: 203, knee: 0.8, peak: 1000 };
+  function gradeNits(m) {
+    const base = GRADE.white * m;
+    if (m <= GRADE.knee) return base;
+    const t = (m - GRADE.knee) / (1 - GRADE.knee);
+    return base + (GRADE.peak - GRADE.white) * t * t;
+  }
+
+  // ---- projector response: signal 0..1 → normalized light 0..1 (0 = black, 1 = white)
+  const curveBlack = p => (p.iris === 'dynamic' && p.blackOpen) ? p.blackOpen : p.black;
+  function curveKey(p) {
+    if (p.tone === 'gamma') return 'g' + p.gamma;
+    if (p.tone === 'table' && p.table.length) return 't' + JSON.stringify(p.table) + '|' + p.white + '|' + curveBlack(p);
+    return 'b' + (curveBlack(p) / p.white).toPrecision(6);
+  }
+  // Measured grayscale (stimulus %, nits): interpolate the point gamma between readings, then force a rising curve.
+  function tableLUT(lut, table, W, B) {
+    const pts = table.map(([v, L]) => [v / 100, L]).filter(([v, L]) => v >= 0 && v <= 1 && L >= 0).sort((a, b) => a[0] - b[0]);
+    const z = pts.find(q => q[0] === 0), o = pts.find(q => q[0] === 1);
+    const L0 = z ? z[1] : B, L1 = o ? o[1] : W;
+    if (!(L1 > L0)) return false;
+    const gs = [];
+    for (const [v, L] of pts) {
+      if (v <= 0 || v >= 1) continue;
+      const n = (L - L0) / (L1 - L0);
+      if (n > 0 && n < 1) gs.push([v, Math.log(n) / Math.log(v)]);
+    }
+    if (!gs.length) return false;
+    const N = lut.length - 1;
+    let j = 0;
+    for (let i = 1; i < N; i++) {
+      const v = i / N;
+      let gam;
+      if (v <= gs[0][0]) gam = gs[0][1];
+      else if (v >= gs[gs.length - 1][0]) gam = gs[gs.length - 1][1];
+      else {
+        while (j < gs.length - 2 && v > gs[j + 1][0]) j++;
+        const [v0, g0] = gs[j], [v1, g1] = gs[j + 1];
+        gam = g0 + (g1 - g0) * (v - v0) / (v1 - v0);
+      }
+      lut[i] = Math.pow(v, gam);
+    }
+    lut[0] = 0; lut[N] = 1;
+    for (let i = 1; i <= N; i++) if (lut[i] < lut[i - 1]) lut[i] = lut[i - 1];
+    return true;
+  }
+  function responseLUT(p, size = 256) {
+    const lut = new Float32Array(size), N = size - 1;
+    const W = p.white, B = curveBlack(p);
+    let ok = false;
+    if (p.tone === 'table' && p.table.length) ok = tableLUT(lut, p.table, W, B);
+    if (!ok && p.tone === 'gamma') { for (let i = 0; i <= N; i++) lut[i] = Math.pow(i / N, p.gamma); ok = true; }
+    if (!ok) { // ITU-R BT.1886 with the measured white and black
+      const g = 2.4, lw = Math.pow(W, 1 / g), lb = Math.pow(B, 1 / g), a = Math.pow(lw - lb, g), b = lb / (lw - lb);
+      for (let i = 0; i <= N; i++) lut[i] = cl((a * Math.pow(Math.max(i / N + b, 0), g) - B) / (W - B), 0, 1);
+    }
+    lut[0] = 0; lut[N] = 1;
+    return lut;
+  }
+
+  // ---- screens and seating. st = { screenA, screenB, ambient, seat, geo }
+  // Same projector light on a bigger screen spreads over more area: luminance ∝ gain ÷ area.
+  const screenFactor = (st, scr) => scr.gain / st.screenA.gain * (st.screenA.size / scr.size) ** 2;
+  const falloff = (scr, deg) => scr.half > 0 ? Math.pow(0.5, (deg / scr.half) ** 2) : 1;
+  function screenWidthM(st, scr) { const d = scr.size * 0.0254, ar = st.geo.aspect === '2.39' ? 2.39 : 16 / 9; return d * ar / Math.sqrt(ar * ar + 1); }
+  const distM = st => st.geo.distUnit === 'm' ? st.geo.dist : st.geo.dist * 0.3048;
+  // Brightness factor per image column, relative to what was measured (screen A, head-on, center).
+  function gainRow(st, scr, tw) {
+    const f = screenFactor(st, scr), g = new Float32Array(tw);
+    if (!st.geo.on) { g.fill(falloff(scr, st.seat) * f); return g; }
+    const Wd = screenWidthM(st, scr), D = distM(st), s = D * Math.tan(st.seat * Math.PI / 180);
+    for (let x = 0; x < tw; x++) {
+      const px = ((x + 0.5) / tw - 0.5) * Wd;
+      const av = Math.atan2(s - px, D);                      // this point → your eyes
+      const al = scr.lobe === 'mirror' ? Math.atan2(px, D)   // mirror of a projector near the seats
+        : Math.atan2(-px, D);                                 // aimed at the center seat (Fresnel, matte)
+      g[x] = falloff(scr, Math.abs(av - al) * 180 / Math.PI) * f;
+    }
+    return g;
+  }
+  const isDyn = p => p.iris === 'dynamic' && p.blackOpen > p.black;
+  // Everything one side needs to turn normalized light into nits on the screen.
+  // stats = { mean: [3], peak } of the normalized-light image; lw = luminance weights of its RGB space.
+  function simSide(st, side, prof, stats, tw, lw) {
+    const scr = side === 'A' ? st.screenA : st.screenB;
+    const gf = gainRow(st, scr, tw);
+    let gMax = 0, gSum = 0;
+    for (let i = 0; i < tw; i++) { gSum += gf[i]; if (gf[i] > gMax) gMax = gf[i]; }
+    const gMean = gSum / tw, gC = gf[tw >> 1];
+    const dyn = isDyn(prof);
+    let Bf, span, irisS = 1;
+    // Dynamic iris: closes as far as the frame's brightest part allows, with brightness compensation.
+    if (dyn) { irisS = cl(stats.peak, prof.black / prof.blackOpen, 1); Bf = prof.blackOpen * irisS; span = prof.white - prof.blackOpen; }
+    else { Bf = prof.black; span = prof.white - prof.black; }
+    // ANSI contrast: an even veil proportional to the frame's average light.
+    const veil = [0, 0, 0], Bn = curveBlack(prof);
+    if (prof.ansi > 1 && prof.ansi < prof.white / Bn) {
+      const V = (prof.white - prof.ansi * Bn) / (prof.ansi - 1), kv = V / ((prof.white + Bn) / 2);
+      for (let c = 0; c < 3; c++) veil[c] = kv * (Bf + span * stats.mean[c]) * gMean;
+    }
+    // Ambient light as read on screen A; screen B reflects it in proportion to (1 − rejection).
+    const rejA = cl(st.screenA.rej, 0, 95) / 100, rejS = cl(scr.rej, 0, 95) / 100;
+    const ambN = st.ambient * (1 - rejS) / (1 - rejA);
+    const amb = [ambN, ambN, ambN]; // neutral (D65) room light
+    let peakOut = 0;
+    for (let c = 0; c < 3; c++) peakOut = Math.max(peakOut, (Bf + span) * gMax + veil[c] + amb[c]);
+    const f = screenFactor(st, scr);
+    let peakRef = 0; // head-on, so sitting to the side visibly dims the picture
+    for (let c = 0; c < 3; c++) peakRef = Math.max(peakRef, (Bf + span) * f + veil[c] + amb[c]);
+    const veilY = lw[0] * veil[0] + lw[1] * veil[1] + lw[2] * veil[2];
+    return { side, prof, scr, gf, gC, gMax, Bf, span, irisS, dyn, veil, veilY, amb, ambN, peakOut, peakRef, lw,
+      whiteC: prof.white * gC, blackC: prof.black * gC, floorC: Bf * gC + veilY + ambN };
+  }
+  // Light on the screen (nits, per channel) for normalized light n3 in image column x.
+  function lightAt(sim, n3, x) {
+    const g = sim.gf[x];
+    return [0, 1, 2].map(c => (sim.Bf + sim.span * n3[c]) * g + sim.veil[c] + sim.amb[c]);
+  }
+  // Monitor code value (0..255, before dither) for that light, given the display scale k = 1 / nits at monitor white
+  // and an optional matrix from the image's RGB space to the canvas's.
+  function displayCode(sim, n3, x, k, M) {
+    let v = lightAt(sim, n3, x).map(l => l * k);
+    if (M) v = mul3(M, v);
+    return v.map(l => 255 * srgbEncode(cl(l, 0, 1)));
+  }
+  // SDR → HDR grade of one pixel: SDR code values 0..255 (BT.709) → BT.2020 linear nits.
+  function sdrPixelToHdr(r8, g8, b8) {
+    const lin = [r8, g8, b8].map(c => Math.pow(c / 255, 2.4));
+    const m = Math.max(lin[0], lin[1], lin[2]);
+    const s = m > 0 ? gradeNits(m) / m : 0;
+    return mul3(convert('bt709', 'bt2020'), lin.map(v => v * s));
+  }
+  // One HDR pixel (BT.2020 linear nits) through the tone curve → normalized light 0..1 for the projector.
+  function hdrPixelToN(rgbNits, srcMaxNits, targetNits) {
+    const m = Math.max(rgbNits[0], rgbNits[1], rgbNits[2]);
+    if (!(m > 0)) return [0, 0, 0];
+    const Lm = targetNits >= srcMaxNits ? Math.min(m, targetNits) : pqToNits(eetf(Math.min(nitsToPq(m), nitsToPq(srcMaxNits)), nitsToPq(srcMaxNits), nitsToPq(targetNits)));
+    return rgbNits.map(v => v * Lm / m / targetNits);
+  }
+
+
+  // ---- whole-picture pipeline. Statistics and every nonlinear step use the picture at its own resolution;
+  // only the resulting (linear) light is box-filtered down to the preview size, so the preview size can never
+  // change a number or the average light of a region.
+  function boxWeights(srcN, dstN) {
+    const scale = srcN / dstN, start = new Int32Array(dstN), count = new Int32Array(dstN), off = new Int32Array(dstN), ws = [];
+    for (let d = 0; d < dstN; d++) {
+      const a = d * scale, b = Math.min(srcN, (d + 1) * scale);
+      const i0 = Math.floor(a), i1 = Math.min(srcN - 1, Math.ceil(b) - 1);
+      start[d] = i0; count[d] = i1 - i0 + 1; off[d] = ws.length;
+      let tot = 0;
+      for (let i = i0; i <= i1; i++) { const w = Math.min(b, i + 1) - Math.max(a, i); ws.push(w); tot += w; }
+      for (let k = off[d]; k < ws.length; k++) ws[k] /= tot;
+    }
+    return { start, count, off, w: Float32Array.from(ws) };
+  }
+  // Area-weighted box filter of a 3-channel linear image (preserves the average exactly).
+  function resampleF3(src, sw, sh, tw, th) {
+    if (tw === sw && th === sh) return src;
+    const hx = boxWeights(sw, tw), hy = boxWeights(sh, th), tmp = new Float32Array(tw * sh * 3), out = new Float32Array(tw * th * 3);
+    for (let y = 0; y < sh; y++) {
+      const row = y * sw * 3, trow = y * tw * 3;
+      for (let x = 0; x < tw; x++) {
+        let r = 0, g = 0, b = 0;
+        const s0 = hx.start[x], n = hx.count[x], wo = hx.off[x];
+        for (let k = 0; k < n; k++) { const w = hx.w[wo + k], si = row + (s0 + k) * 3; r += w * src[si]; g += w * src[si + 1]; b += w * src[si + 2]; }
+        const t = trow + x * 3; tmp[t] = r; tmp[t + 1] = g; tmp[t + 2] = b;
+      }
+    }
+    const rowLen = tw * 3;
+    for (let y = 0; y < th; y++) {
+      const s0 = hy.start[y], n = hy.count[y], wo = hy.off[y], orow = y * rowLen;
+      for (let k = 0; k < n; k++) { const w = hy.w[wo + k], trow = (s0 + k) * rowLen; for (let i = 0; i < rowLen; i++) out[orow + i] += w * tmp[trow + i]; }
+    }
+    return out;
+  }
+  // Frame statistics of a normalized-light picture: mean per channel, 99.9th percentile of the brightest channel
+  // (1,024 bins), and the distribution of its luminance (4,096 bins on a square-root scale) for the washout readout.
+  const CDF_BINS = 4096;
+  function newStats() { return { m: [0, 0, 0], hist: new Float64Array(1024), cdf: new Float64Array(CDF_BINS), N: 0 }; }
+  function addPixel(st, r, g, b, lw) {
+    st.m[0] += r; st.m[1] += g; st.m[2] += b; st.N++;
+    const mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+    st.hist[Math.min(1023, (mx * 1023 + 0.5) | 0)]++;
+    const y = lw[0] * r + lw[1] * g + lw[2] * b;
+    st.cdf[Math.min(CDF_BINS - 1, (Math.sqrt(y > 0 ? y : 0) * (CDF_BINS - 1)) | 0)]++;
+  }
+  function finishStats(st) {
+    const N = st.N || 1, target = N * 0.999;
+    let acc = 0, peak = 1;
+    for (let i = 0; i < 1024; i++) { acc += st.hist[i]; if (acc >= target) { peak = i / 1023; break; } }
+    const cum = new Float64Array(CDF_BINS);
+    for (let i = 0, a = 0; i < CDF_BINS; i++) { a += st.cdf[i]; cum[i] = a; }
+    return { mean: st.m.map(v => v / N), peak, cdf: st.cdf, cum, count: N };
+  }
+  // Share of the picture whose normalized luminance is below t.
+  function fractionBelow(stats, t) {
+    if (!(t > 0)) return 0;
+    if (t >= 1) return 1;
+    const k = Math.sqrt(t) * (CDF_BINS - 1), i = k | 0, f = k - i;
+    return ((i > 0 ? stats.cum[i - 1] : 0) + f * stats.cdf[i]) / stats.count;
+  }
+  // SDR: 8-bit RGBA picture + projector curve → { data (normalized light at tw×th), stats at source resolution }.
+  function sdrImage(rgba, w, h, lut, tw, th, lw) {
+    const N = w * h, lin = new Float32Array(N * 3), st = newStats();
+    for (let i = 0, s = 0, o = 0; i < N; i++, s += 4, o += 3) {
+      const r = lut[rgba[s]], g = lut[rgba[s + 1]], b = lut[rgba[s + 2]];
+      lin[o] = r; lin[o + 1] = g; lin[o + 2] = b; addPixel(st, r, g, b, lw);
+    }
+    return { w: tw, h: th, data: resampleF3(lin, w, h, tw, th), ...finishStats(st) };
+  }
+  // HDR source statistics at source resolution: brightest channel per pixel (nits and PQ) and its 99.9th percentile.
+  function hdrSourceStats(lin, N) {
+    const maxN = new Float32Array(N), maxE = new Float32Array(N), hist = new Float64Array(1024);
+    for (let p = 0, i = 0; p < N; p++, i += 3) {
+      const r = lin[i], g = lin[i + 1], b = lin[i + 2], m = r > g ? (r > b ? r : b) : (g > b ? g : b);
+      maxN[p] = m > 0 ? m : 0; maxE[p] = nitsToPq(maxN[p]); hist[Math.min(1023, (maxE[p] * 1023 + 0.5) | 0)]++;
+    }
+    let acc = 0, p999 = 1;
+    for (let i = 0; i < 1024; i++) { acc += hist[i]; if (acc >= N * 0.999) { p999 = pqToNits(i / 1023); break; } }
+    return { maxN, maxE, p999: Math.max(p999, 1) };
+  }
+  // HDR: tone-map at source resolution (BT.2408 EETF on the brightest channel), normalize to the target, then
+  // box-filter the light to tw×th. Also returns the share of pixels (> 1 nit) dimmed by more than 10%.
+  function hdrImage(lin, w, h, src, srcMaxNits, targetNits, tw, th, lw) {
+    const N = w * h, out = new Float32Array(N * 3), lut = toneLUT(srcMaxNits, targetNits, 4096), last = 4095, st = newStats();
+    let squeezed = 0;
+    for (let p = 0, i = 0; p < N; p++, i += 3) {
+      const m = src.maxN[p];
+      if (m > 0) {
+        const ef = src.maxE[p] * last, j = ef | 0, fr = ef - j;
+        const Lm = j >= last ? lut[last] : lut[j] + (lut[j + 1] - lut[j]) * fr;
+        const s = Lm / m / targetNits;
+        out[i] = lin[i] * s; out[i + 1] = lin[i + 1] * s; out[i + 2] = lin[i + 2] * s;
+        if (m > 1 && Lm < 0.9 * m) squeezed++;
+      }
+      addPixel(st, out[i], out[i + 1], out[i + 2], lw);
+    }
+    return { w: tw, h: th, data: resampleF3(out, w, h, tw, th), squeezed: squeezed / N, ...finishStats(st) };
+  }
+  // PQ code values (PNG, 8 or 16 bit) → BT.2020 linear nits. cICP primaries: 1 = BT.709, 9 = BT.2020,
+  // 12 = P3-D65 (ITU-T H.273 Table 2). Anything else is refused rather than guessed.
+  const CICP_PRIMARIES = { 1: 'bt709', 9: 'bt2020', 12: 'p3' };
+  function pqCodesToNits(codes, depth, limited, primaries) {
+    const space = CICP_PRIMARIES[primaries];
+    if (!space) throw new Error('unsupported primaries ' + primaries);
+    const max = depth === 16 ? 65535 : 255, k = depth === 16 ? 256 : 1, lut = new Float32Array(max + 1);
+    for (let i = 0; i <= max; i++) lut[i] = pqToNits(cl(limited ? (i - 16 * k) / (219 * k) : i / max, 0, 1));
+    const out = new Float32Array(codes.length);
+    for (let i = 0; i < codes.length; i++) out[i] = lut[codes[i]];
+    if (space !== 'bt2020') {
+      const M = convert(space, 'bt2020');
+      for (let i = 0; i < out.length; i += 3) { const r = out[i], g = out[i + 1], b = out[i + 2]; out[i] = M[0][0] * r + M[0][1] * g + M[0][2] * b; out[i + 1] = M[1][0] * r + M[1][1] * g + M[1][2] * b; out[i + 2] = M[2][0] * r + M[2][1] * g + M[2][2] * b; }
+    }
+    return out;
+  }
+  // Measurement import: black and white come only from real 0% and 100% readings, never from interior ones.
+  function endpointsFromRows(rows) {
+    const z = rows.find(r => r[0] <= 0.001), o = rows.find(r => r[0] >= 99.999);
+    return { black: z ? z[1] : null, white: o ? o[1] : null };
+  }
+
+  return { cl, inv3, mul33, mul3, D65, PRIMARIES, rgbToXYZ, TO_XYZ, convert, lumaWeights, srgbEncode, PQ, pqToNits, nitsToPq, eetf, toneLUT,
+    boxWeights, resampleF3, fractionBelow, sdrImage, hdrSourceStats, hdrImage, CICP_PRIMARIES, pqCodesToNits, endpointsFromRows,
+    GRADE, gradeNits, curveBlack, curveKey, tableLUT, responseLUT, screenFactor, falloff, screenWidthM, distM, gainRow, isDyn, simSide,
+    lightAt, displayCode, sdrPixelToHdr, hdrPixelToN };
+})();
+/* SGS-ENGINE-END */
+
+// ---------- engine ↔ app
+const LW709 = SGS.lumaWeights('bt709'), LW2020 = SGS.lumaWeights('bt2020');
+const tableLUT = SGS.tableLUT, toneKey = SGS.curveKey, isDyn = SGS.isDyn, falloff = SGS.falloff;
+const lutCache = new Map();
+function nLUT(p) { const k = toneKey(p); let l = lutCache.get(k); if (!l) { l = SGS.responseLUT(p); lutCache.set(k, l); } return l; }
+const profById = id => S.profiles.find(p => p.id === id) || S.profiles[0];
+const profileFor = side => profById(side === 'A' || S.linked ? S.profA : S.profB);
+// The same projector light spread over a bigger screen: brightness scales with (A size ÷ B size)².
+const areaFactor = scr => (S.screenA.size / scr.size) ** 2;
+// Sideways distance from the screen's center line at your seat: distance back × tan(angle).
+function sideText() { const off = S.geo.dist * Math.tan(S.seat * Math.PI / 180); return `${S.seat}° · ${off < 0.05 ? '0' : off < 10 ? off.toFixed(1) : Math.round(off)} ${S.geo.distUnit}`; }
+
+// ---------- pictures → normalized projector light (see SGS.sdrImage / SGS.hdrImage)
+const resampleF3 = SGS.resampleF3;
+const nCache = new Map();
+function cachePut(map, key, val, max) { map.set(key, val); while (map.size > max) map.delete(map.keys().next().value); return val; }
+function cacheGet(map, key) { const v = map.get(key); if (v) { map.delete(key); map.set(key, v); } return v; }
+function getN(sc, prof, tw, th) {
+  const key = sc.id + '|' + toneKey(prof) + '|' + tw + 'x' + th;
+  return cacheGet(nCache, key) || cachePut(nCache, key, { key, ...SGS.sdrImage(sc.img.data, sc.img.w, sc.img.h, nLUT(prof), tw, th, LW709) }, 4);
+}
+
+// ---------- HDR pictures: BT.2020 linear light in nits
+const HDR_GAMMA_LUT = (() => { const t = new Float32Array(256); for (let i = 0; i < 256; i++) t[i] = Math.pow(i / 255, 2.4); return t; })();
+const M709to2020 = SGS.convert('bt709', 'bt2020');
+// SDR picture → HDR using the app's grade (see SGS.gradeNits).
+function gradeSdr(img) {
+  const n = img.w * img.h, src = img.data, out = new Float32Array(n * 3), M = M709to2020, G = HDR_GAMMA_LUT;
+  for (let i = 0, o = 0; i < n; i++, o += 3) {
+    const s = i * 4, r = G[src[s]], g = G[src[s + 1]], b = G[src[s + 2]];
+    const m = r > g ? (r > b ? r : b) : (g > b ? g : b);
+    const k = m > 0 ? SGS.gradeNits(m) / m : 0;
+    out[o] = k * (M[0][0] * r + M[0][1] * g + M[0][2] * b);
+    out[o + 1] = k * (M[1][0] * r + M[1][1] * g + M[1][2] * b);
+    out[o + 2] = k * (M[2][0] * r + M[2][1] * g + M[2][2] * b);
+  }
+  return { w: img.w, h: img.h, data: out };
+}
+const gradedCache = new Map();
+function hdrSource(sc) {
+  if (sc.hdr) return sc.hdr;
+  return cacheGet(gradedCache, sc.id) || cachePut(gradedCache, sc.id, gradeSdr(sc.img), 2);
+}
+// Per picture and size: resampled linear nits, brightest channel per pixel (nits and PQ), and highlight level.
+// Per picture, at its own resolution: brightest channel per pixel and the highlight level (P99.9).
+const hdrBaseCache = new Map();
+function getHdrBase(sc) {
+  const key = sc.id + (sc.hdr ? '|native' : '|graded');
+  const e = cacheGet(hdrBaseCache, key);
+  if (e) return e;
+  const src = hdrSource(sc);
+  return cachePut(hdrBaseCache, key, { key, src, ...SGS.hdrSourceStats(src.data, src.w * src.h) }, 2);
+}
+// Tone-mapped at source resolution, then shrunk to the preview size.
+const hdrNCache = new Map();
+function getHdrN(base, srcMax, target, tw, th) {
+  const key = base.key + '|' + srcMax.toFixed(2) + '|' + target.toFixed(3) + '|' + tw + 'x' + th;
+  return cacheGet(hdrNCache, key) || cachePut(hdrNCache, key, { key, ...SGS.hdrImage(base.src.data, base.src.w, base.src.h, base, srcMax, target, tw, th, LW2020) }, 4);
+}
+function tmTarget(side, prof) {
+  const base = S.hdr.target > 0 ? S.hdr.target : prof.white;
+  return side === 'B' && S.hdr.bMode === 'retuned' ? base * SGS.screenFactor(S, S.screenB) : base;
+}
+function hdrSourceMax(base) { return S.hdr.tm === 'static4000' ? 4000 : S.hdr.tm === 'static1000' ? 1000 : base.p999; }
+
+// ---------- output: Display P3 canvas where the browser supports it, else sRGB
+const ENC_N = 65536;
+const ENC = (() => { const t = new Float32Array(ENC_N + 1); for (let i = 0; i <= ENC_N; i++) t[i] = 255 * SGS.srgbEncode(i / ENC_N); return t; })();
+const DITH = (() => { const t = new Float32Array(4096); for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) { const v = 52.9829189 * ((0.06711056 * x + 0.00583715 * y) % 1); t[y * 64 + x] = (v % 1) - 0.5; } return t; })();
+function makeCtx(cv) { let c = null; try { c = cv.getContext('2d', { colorSpace: 'display-p3' }); } catch (e) { c = null; } return c || cv.getContext('2d'); }
+const OUT = (() => {
+  let p3 = false;
+  try { const t = document.createElement('canvas').getContext('2d', { colorSpace: 'display-p3' }); p3 = !!t && t.createImageData(1, 1, { colorSpace: 'display-p3' }).colorSpace === 'display-p3'; } catch (e) { p3 = false; }
+  return { p3, space: p3 ? 'display-p3' : 'srgb', from709: p3 ? SGS.convert('bt709', 'p3') : null, from2020: SGS.convert('bt2020', p3 ? 'p3' : 'bt709') };
+})();
+// Normalized light → nits on the screen → monitor code values, with sub-LSB dithering.
+function paint(cv, ctx, nE, sim, k, M) {
+  const w = nE.w, h = nE.h;
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; cv._id = null; }
+  if (!cv._id) { try { cv._id = ctx.createImageData(w, h, { colorSpace: OUT.space }); } catch (e) { cv._id = ctx.createImageData(w, h); } }
+  const out = cv._id.data, N = nE.data, gf = sim.gf, lw = sim.lw;
+  const Bk = sim.Bf * k, Sk = sim.span * k;
+  const a0 = (sim.veil[0] + sim.amb[0]) * k, a1 = (sim.veil[1] + sim.amb[1]) * k, a2 = (sim.veil[2] + sim.amb[2]) * k;
+  const m = M ? M.flat() : null;
+  let sumY = 0, clip = 0;
+  for (let y = 0, i = 0, o = 0; y < h; y++) {
+    const drow = (y & 63) << 6;
+    for (let x = 0; x < w; x++, i += 3, o += 4) {
+      const g = gf[x];
+      const pr = (Bk + Sk * N[i]) * g, pg = (Bk + Sk * N[i + 1]) * g, pb = (Bk + Sk * N[i + 2]) * g;
+      let r = pr + a0, gg = pg + a1, b = pb + a2;
+      sumY += lw[0] * r + lw[1] * gg + lw[2] * b;
+      if (m) {
+        const r2 = m[0] * r + m[1] * gg + m[2] * b, g2 = m[3] * r + m[4] * gg + m[5] * b, b2 = m[6] * r + m[7] * gg + m[8] * b;
+        r = r2 > 0 ? r2 : 0; gg = g2 > 0 ? g2 : 0; b = b2 > 0 ? b2 : 0;
+      }
+      if (r > 1 || gg > 1 || b > 1) { clip++; if (r > 1) r = 1; if (gg > 1) gg = 1; if (b > 1) b = 1; }
+      const d = DITH[drow | (x & 63)];
+      out[o] = ENC[(r * ENC_N) | 0] + d;
+      out[o + 1] = ENC[(gg * ENC_N) | 0] + d;
+      out[o + 2] = ENC[(b * ENC_N) | 0] + d;
+      out[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(cv._id, 0, 0);
+  const n = w * h;
+  return { mean: sumY / n / k, clip: clip / n };
+}
+function pixelY(sim, nE, x, y) {
+  const i = (y * nE.w + x) * 3, l = SGS.lightAt(sim, [nE.data[i], nE.data[i + 1], nE.data[i + 2]], x);
+  return sim.lw[0] * l[0] + sim.lw[1] * l[1] + sim.lw[2] * l[2];
+}
+
+// ---------- built-in scenes, drawn procedurally at 1920×1080 (seeded, so every visit draws the same pixels)
+function mulberry(seed) { return () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function lg(ctx, x0, y0, x1, y1, stops) { const g = ctx.createLinearGradient(x0, y0, x1, y1); for (const [o, c] of stops) g.addColorStop(o, c); return g; }
+function rg(ctx, x, y, r, stops) { const g = ctx.createRadialGradient(x, y, 0, x, y, r); for (const [o, c] of stops) g.addColorStop(o, c); return g; }
+function glow(ctx, x, y, r, stops) { ctx.fillStyle = rg(ctx, x, y, r, stops); ctx.fillRect(x - r, y - r, 2 * r, 2 * r); }
+function disc(ctx, x, y, r, fill) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill(); }
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+function ridge(R, n, rough) {
+  const a = new Float32Array(n + 1);
+  a[0] = R() * 2 - 1; a[n] = R() * 2 - 1;
+  let step = n, amp = 1;
+  while (step > 1) { const h = step >> 1; for (let i = h; i < n; i += step) a[i] = (a[i - h] + a[i + h]) / 2 + (R() * 2 - 1) * amp; step = h; amp *= rough; }
+  let m = 0; for (const v of a) m = Math.max(m, Math.abs(v));
+  for (let i = 0; i <= n; i++) a[i] /= m || 1;
+  return a;
+}
+function fillRidge(ctx, W, H, base, amp, a, fill) {
+  ctx.beginPath(); ctx.moveTo(0, H);
+  for (let i = 0; i < a.length; i++) ctx.lineTo(i / (a.length - 1) * W, base - a[i] * amp);
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+}
+function conifer(ctx, x, y, h, dark, lit) {
+  const w = h * 0.42;
+  ctx.fillStyle = '#3a2a1c'; ctx.fillRect(x - w * 0.06, y - h * 0.12, w * 0.12, h * 0.14);
+  ctx.beginPath(); ctx.moveTo(x, y - h); ctx.lineTo(x + w / 2, y - h * 0.1); ctx.lineTo(x - w / 2, y - h * 0.1); ctx.closePath(); ctx.fillStyle = dark; ctx.fill();
+  if (lit) { ctx.beginPath(); ctx.moveTo(x, y - h); ctx.lineTo(x + w / 2, y - h * 0.1); ctx.lineTo(x + w * 0.08, y - h * 0.1); ctx.closePath(); ctx.fillStyle = lit; ctx.fill(); }
+}
+
+function drawValley(ctx, W, H) {
+  const R = mulberry(11), hz = H * 0.56;
+  ctx.fillStyle = lg(ctx, 0, 0, 0, hz, [[0, '#2b62b3'], [0.55, '#6ea3dc'], [1, '#d3e4ef']]); ctx.fillRect(0, 0, W, H);
+  glow(ctx, 1460, 200, 560, [[0, 'rgba(255,253,240,1)'], [0.06, 'rgba(255,250,232,0.95)'], [0.18, 'rgba(255,244,214,0.4)'], [0.5, 'rgba(255,240,210,0.12)'], [1, 'rgba(255,240,210,0)']]);
+  disc(ctx, 1460, 200, 30, '#fffef8');
+  for (let i = 0; i < 10; i++) {
+    const cx = R() * W, cy = 70 + R() * 280, s = 0.6 + R();
+    for (let j = 0; j < 8; j++) glow(ctx, cx + (R() - 0.5) * 280 * s, cy + (R() - 0.5) * 44 * s, (45 + R() * 65) * s, [[0, 'rgba(255,255,255,0.8)'], [0.55, 'rgba(250,252,255,0.45)'], [1, 'rgba(250,252,255,0)']]);
+  }
+  fillRidge(ctx, W, H, hz - 70, 150, ridge(R, 256, 0.55), '#a3b8cd');
+  fillRidge(ctx, W, H, hz - 10, 110, ridge(R, 256, 0.52), lg(ctx, 0, hz - 120, 0, hz + 60, [[0, '#7590a6'], [1, '#64806f']]));
+  ctx.fillStyle = lg(ctx, 0, hz + 20, 0, hz + 110, [[0, '#a7c4db'], [1, '#5f88a8']]); ctx.fillRect(0, hz + 20, W, 90);
+  fillRidge(ctx, W, H, hz + 120, 60, ridge(R, 128, 0.5), lg(ctx, 0, hz + 60, 0, H, [[0, '#6ea443'], [0.5, '#4b8030'], [1, '#2c561c']]));
+  const trees = [];
+  for (let i = 0; i < 90; i++) trees.push([R() * W, hz + 110 + R() * 170, R()]);
+  trees.sort((a, b) => a[1] - b[1]).forEach(([x, y, r]) => conifer(ctx, x, y, (30 + r * 55) * (0.7 + (y - hz) / 300), '#1e3b1a', '#2f5a27'));
+  barn(ctx, 560, hz + 215);
+  fillRidge(ctx, W, H, H * 0.86, 26, ridge(R, 64, 0.5), lg(ctx, 0, H * 0.8, 0, H, [[0, '#5d9a35'], [1, '#29501a']]));
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 2600; i++) {
+    const x = R() * W, y = H * 0.84 + R() * H * 0.17;
+    ctx.strokeStyle = R() < 0.5 ? 'rgba(170,215,100,0.35)' : 'rgba(18,44,10,0.4)';
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (R() - 0.5) * 8, y - 6 - R() * 16); ctx.stroke();
+  }
+  const fl = ['#f7e15a', '#ffffff', '#e35b4a', '#c58ae0'];
+  for (let i = 0; i < 220; i++) disc(ctx, R() * W, H * 0.87 + R() * H * 0.13, 2 + R() * 2.5, fl[(R() * 4) | 0]);
+}
+function barn(ctx, x, y) {
+  const w = 150, h = 90, d = 90;
+  ctx.fillStyle = '#7d281e'; ctx.fillRect(x + w, y - h, d, h);
+  ctx.fillStyle = '#b23a2b'; ctx.fillRect(x, y - h, w, h);
+  ctx.beginPath(); ctx.moveTo(x - 6, y - h); ctx.lineTo(x + w / 2, y - h - 70); ctx.lineTo(x + w + 6, y - h); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + w / 2, y - h - 70); ctx.lineTo(x + w / 2 + d, y - h - 70); ctx.lineTo(x + w + d + 6, y - h); ctx.lineTo(x + w + 6, y - h); ctx.closePath(); ctx.fillStyle = '#3d3430'; ctx.fill();
+  ctx.fillStyle = '#efe7da'; ctx.fillRect(x + w / 2 - 34, y - 64, 68, 64);
+  ctx.fillStyle = '#5a1d16'; ctx.fillRect(x + w / 2 - 28, y - 58, 56, 58);
+  ctx.strokeStyle = '#efe7da'; ctx.lineWidth = 4; ctx.beginPath();
+  ctx.moveTo(x + w / 2 - 28, y - 58); ctx.lineTo(x + w / 2 + 28, y); ctx.moveTo(x + w / 2 + 28, y - 58); ctx.lineTo(x + w / 2 - 28, y); ctx.stroke();
+  ctx.fillStyle = '#efe7da'; ctx.fillRect(x + w / 2 - 14, y - h - 36, 28, 26);
+  ctx.fillStyle = '#2a1410'; ctx.fillRect(x + w / 2 - 10, y - h - 32, 20, 18);
+}
+
+function drawCity(ctx, W, H) {
+  const R = mulberry(7), base = Math.round(H * 0.74);
+  ctx.fillStyle = lg(ctx, 0, 0, 0, base, [[0, '#010103'], [0.5, '#050a1c'], [0.85, '#121735'], [1, '#2a2238']]); ctx.fillRect(0, 0, W, base);
+  for (let i = 0; i < 520; i++) { const b = R() ** 3, s = b > 0.85 ? 2 : 1; ctx.fillStyle = `rgba(255,255,255,${(0.2 + 0.8 * b).toFixed(3)})`; ctx.fillRect(R() * W, R() * base * 0.7, s, s); }
+  glow(ctx, 250, 100, 280, [[0, 'rgba(210,220,255,0.35)'], [0.2, 'rgba(170,185,235,0.12)'], [1, 'rgba(0,0,0,0)']]);
+  disc(ctx, 250, 100, 46, '#f2efe3');
+  for (const [dx, dy, r] of [[-14, -10, 10], [12, 8, 7], [-4, 18, 6], [16, -16, 5]]) disc(ctx, 250 + dx, 100 + dy, r, 'rgba(180,175,160,0.35)');
+  let x = 0;
+  while (x < W) {
+    const w = 40 + R() * 90, h = 60 + R() * 200;
+    ctx.fillStyle = '#090c17'; ctx.fillRect(x, base - h, w, h);
+    for (let yy = base - h + 10; yy < base - 8; yy += 14) for (let xx = x + 5; xx < x + w - 6; xx += 10) if (R() < 0.12) { ctx.fillStyle = `rgba(255,214,140,${(0.15 + R() * 0.3).toFixed(2)})`; ctx.fillRect(xx, yy, 4, 6); }
+    x += w + R() * 4;
+  }
+  x = -20;
+  while (x < W) {
+    const w = 70 + R() * 150, h = 160 + R() * 480, top = base - h, c = (10 + R() * 10) | 0;
+    ctx.fillStyle = `rgb(${c},${c + 3},${c + 12})`; ctx.fillRect(x, top, w, h);
+    if (R() < 0.4) ctx.fillRect(x + w * 0.3, top - 30, w * 0.4, 30);
+    if (h > 420) glow(ctx, x + w / 2, top - 34, 14, [[0, 'rgba(255,60,50,0.95)'], [1, 'rgba(255,60,50,0)']]);
+    const lit = 0.18 + R() * 0.3, warm = R() < 0.8;
+    for (let yy = top + 14; yy < base - 14; yy += 22) {
+      const floorOn = R() < 0.75;
+      for (let xx = x + 8; xx < x + w - 14; xx += 16) {
+        if (floorOn && R() < lit) {
+          const a = (0.55 + R() * 0.45).toFixed(2);
+          ctx.fillStyle = (warm || R() < 0.2) ? `rgba(255,${205 + ((R() * 40) | 0)},${120 + ((R() * 60) | 0)},${a})` : `rgba(170,215,255,${a})`;
+        } else ctx.fillStyle = 'rgba(28,34,52,0.7)';
+        ctx.fillRect(xx, yy, 9, 13);
+      }
+    }
+    x += w + 2 + R() * 10;
+  }
+  for (let lx = 40; lx < W; lx += 140) glow(ctx, lx, base - 6, 40, [[0, 'rgba(255,190,110,0.95)'], [0.2, 'rgba(255,170,90,0.35)'], [1, 'rgba(255,170,90,0)']]);
+  ctx.fillStyle = '#020309'; ctx.fillRect(0, base, W, H - base);
+  const hh = H - base;
+  ctx.save(); ctx.globalAlpha = 0.32; ctx.translate(0, base * 2); ctx.scale(1, -1);
+  ctx.drawImage(ctx.canvas, 0, base - hh, W, hh, 0, base - hh, W, hh); ctx.restore();
+  for (let yy = base; yy < H; yy += 3) { ctx.fillStyle = `rgba(2,3,9,${(0.25 + R() * 0.4).toFixed(2)})`; ctx.fillRect(0, yy, W, 1 + ((R() * 1.5) | 0)); }
+}
+
+function drawSpace(ctx, W, H) {
+  const R = mulberry(3);
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter';
+  const neb = [[120, 50, 170], [40, 90, 190], [190, 70, 120], [60, 120, 160]];
+  for (let i = 0; i < 46; i++) { const c = neb[(R() * 4) | 0]; glow(ctx, 420 + R() * 900, 180 + R() * 560, 120 + R() * 320, [[0, `rgba(${c},0.05)`], [1, `rgba(${c},0)`]]); }
+  for (let i = 0; i < 3200; i++) {
+    const v = (18 + 237 * R() ** 4) | 0, t = R();
+    ctx.fillStyle = `rgb(${t < 0.15 ? v : Math.round(v * 0.92)},${Math.round(v * 0.96)},${t > 0.8 ? v : Math.round(v * 0.9)})`;
+    ctx.fillRect((R() * W) | 0, (R() * H) | 0, 1, 1);
+  }
+  for (let i = 0; i < 160; i++) { const v = (120 + R() * 135) | 0; ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect((R() * W) | 0, (R() * H) | 0, 2, 2); }
+  for (let i = 0; i < 12; i++) {
+    const x = R() * W, y = R() * H, r = 10 + R() * 26;
+    glow(ctx, x, y, r, [[0, 'rgba(255,255,255,0.95)'], [0.15, 'rgba(220,230,255,0.45)'], [1, 'rgba(200,215,255,0)']]);
+    ctx.strokeStyle = 'rgba(220,230,255,0.35)'; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.moveTo(x - r * 2.2, y); ctx.lineTo(x + r * 2.2, y); ctx.moveTo(x, y - r * 2.2); ctx.lineTo(x, y + r * 2.2); ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  planet(ctx, R, 1330, 650, 300, '#b88d60', ['rgba(214,180,138,0.6)', 'rgba(150,104,70,0.55)', 'rgba(232,206,170,0.45)', 'rgba(120,80,55,0.5)'], true);
+  planet(ctx, R, 560, 840, 46, '#8d8a86', ['rgba(120,118,114,0.5)', 'rgba(150,147,142,0.4)'], false);
+}
+function planet(ctx, R, cx, cy, r, base, bands, rim) {
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = base; ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+  const n = 22;
+  for (let i = 0; i < n; i++) { ctx.fillStyle = bands[i % bands.length]; ctx.fillRect(cx - r, cy - r + i * (2 * r / n) + (R() - 0.5) * r * 0.04, 2 * r, r * (0.03 + R() * 0.09)); }
+  if (rim) { ctx.fillStyle = 'rgba(170,90,60,0.7)'; ctx.beginPath(); ctx.ellipse(cx - r * 0.2, cy + r * 0.3, r * 0.15, r * 0.075, 0, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = rg(ctx, cx - r * 0.55, cy - r * 0.45, r * 1.75, [[0, 'rgba(0,0,0,0)'], [0.42, 'rgba(0,0,0,0.08)'], [0.58, 'rgba(0,0,0,0.75)'], [0.68, 'rgba(0,0,0,0.97)'], [1, 'rgba(0,0,0,1)']]);
+  ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+  ctx.restore();
+  if (rim) {
+    ctx.save(); ctx.strokeStyle = 'rgba(160,200,255,0.5)'; ctx.lineWidth = 5; ctx.shadowColor = 'rgba(150,190,255,0.8)'; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 1, Math.PI * 0.95, Math.PI * 1.62); ctx.stroke(); ctx.restore();
+  }
+}
+
+function drawRoom(ctx, W, H) {
+  const R = mulberry(13), floorY = H * 0.72;
+  ctx.fillStyle = lg(ctx, 0, 0, 0, floorY, [[0, '#16130f'], [1, '#26201b']]); ctx.fillRect(0, 0, W, floorY);
+  ctx.fillStyle = lg(ctx, 0, floorY, 0, H, [[0, '#17110d'], [1, '#21170f']]); ctx.fillRect(0, floorY, W, H - floorY);
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 2;
+  for (let yy = floorY, gap = 14; yy < H; yy += gap, gap *= 1.18) { ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke(); }
+  ctx.fillStyle = '#0f0c0a'; ctx.fillRect(0, floorY - 18, W, 18);
+  glow(ctx, 1420, 430, 760, [[0, 'rgba(255,244,226,0.16)'], [1, 'rgba(255,244,226,0)']]);
+  const wx = 1160, wy = 150, ww = 520, wh = 560;
+  ctx.fillStyle = lg(ctx, 0, wy, 0, wy + wh, [[0, '#bcd7f5'], [0.7, '#eef5ff'], [1, '#fbfcff']]); ctx.fillRect(wx, wy, ww, wh);
+  ctx.save(); ctx.beginPath(); ctx.rect(wx, wy, ww, wh); ctx.clip();
+  for (let i = 0; i < 40; i++) glow(ctx, wx + R() * ww, wy + wh * 0.62 + R() * wh * 0.4, 30 + R() * 50, [[0, 'rgba(110,160,100,0.55)'], [1, 'rgba(110,160,100,0)']]);
+  ctx.restore();
+  ctx.fillStyle = '#0c0a08';
+  ctx.fillRect(wx - 26, wy - 26, ww + 52, 26); ctx.fillRect(wx - 26, wy + wh, ww + 52, 30); ctx.fillRect(wx - 26, wy, 26, wh); ctx.fillRect(wx + ww, wy, 26, wh);
+  ctx.fillRect(wx + ww / 2 - 8, wy, 16, wh); ctx.fillRect(wx, wy + wh / 2 - 8, ww, 16);
+  ctx.fillStyle = '#3b3128'; ctx.fillRect(wx - 30, wy + wh, ww + 60, 8);
+  ctx.fillStyle = lg(ctx, 0, wy + wh, 0, H, [[0, 'rgba(255,240,215,0.10)'], [1, 'rgba(255,240,215,0.04)']]);
+  ctx.beginPath(); ctx.moveTo(wx, wy + wh); ctx.lineTo(wx + ww, wy + wh); ctx.lineTo(wx + ww - 180, H); ctx.lineTo(wx - 420, H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,236,205,0.32)';
+  ctx.beginPath(); ctx.moveTo(1000, 860); ctx.lineTo(1500, 860); ctx.lineTo(1420, H); ctx.lineTo(720, H); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(23,17,13,0.85)';
+  ctx.beginPath(); ctx.moveTo(1240, 860); ctx.lineTo(1262, 860); ctx.lineTo(1086, H); ctx.lineTo(1062, H); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(926, 955); ctx.lineTo(1468, 955); ctx.lineTo(1464, 968); ctx.lineTo(921, 968); ctx.closePath(); ctx.fill();
+  // bookshelf: low-level colors that test shadow detail
+  ctx.fillStyle = '#0d0a08'; ctx.fillRect(110, 200, 420, floorY - 190);
+  const bk = [[44, 24, 20], [22, 32, 44], [40, 38, 22], [30, 30, 38], [48, 40, 30], [20, 36, 26]];
+  for (let s = 0; s < 5; s++) {
+    const sy = 230 + s * 112;
+    ctx.fillStyle = '#16110d'; ctx.fillRect(126, sy + 92, 388, 10);
+    for (let bx = 130; bx < 500;) {
+      const bw = 12 + R() * 18, bh = 60 + R() * 30, v = bk[(R() * 6) | 0], k = 0.6 + R() * 0.6;
+      ctx.fillStyle = `rgb(${(v[0] * k) | 0},${(v[1] * k) | 0},${(v[2] * k) | 0})`;
+      ctx.fillRect(bx, sy + 92 - bh, Math.min(bw, 510 - bx), bh);
+      bx += bw + 1 + R() * 2; if (R() < 0.08) bx += 20;
+    }
+  }
+  ctx.fillStyle = '#0b0908'; ctx.fillRect(640, 250, 320, 220);
+  ctx.fillStyle = lg(ctx, 0, 265, 0, 455, [[0, '#2a2c3a'], [0.6, '#3a3326'], [1, '#1c1a14']]); ctx.fillRect(656, 266, 288, 188);
+  disc(ctx, 850, 320, 22, '#5a4a30');
+  ctx.fillStyle = '#0a0807'; ctx.fillRect(566, 300, 8, 590);
+  ctx.beginPath(); ctx.moveTo(520, 300); ctx.lineTo(620, 300); ctx.lineTo(600, 230); ctx.lineTo(540, 230); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(570, 890, 50, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#1b1512'; rr(ctx, 620, 640, 520, 110, 20); ctx.fill();
+  ctx.fillStyle = '#120e0c'; rr(ctx, 600, 690, 560, 200, 22); ctx.fill();
+  ctx.fillStyle = '#211a16'; rr(ctx, 640, 735, 235, 60, 14); ctx.fill(); rr(ctx, 885, 735, 235, 60, 14); ctx.fill();
+  ctx.fillStyle = lg(ctx, 1090, 0, 1160, 0, [[0, 'rgba(255,230,200,0)'], [1, 'rgba(255,230,200,0.12)']]); rr(ctx, 1090, 640, 70, 250, 22); ctx.fill();
+  ctx.fillStyle = '#0a0807'; ctx.fillRect(630, 890, 14, 22); ctx.fillRect(1116, 890, 14, 22);
+  ctx.fillStyle = '#2b1e17'; ctx.beginPath(); ctx.moveTo(1725, 780); ctx.lineTo(1845, 780); ctx.lineTo(1825, 900); ctx.lineTo(1745, 900); ctx.closePath(); ctx.fill();
+  for (let i = 0; i < 14; i++) {
+    ctx.save(); ctx.translate(1785, 780); ctx.rotate(-1.4 + i * 0.2 + (R() - 0.5) * 0.2);
+    ctx.fillStyle = '#1c2b19'; ctx.beginPath(); ctx.ellipse(0, -80, 18, 80, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,170,100,0.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, -80, 18, 80, 0, -1.4, 0.2); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawSteps(ctx, W, H) {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const gray = p => { const v = Math.round(p / 100 * 255); return `rgb(${v},${v},${v})`; };
+  const font = '500 22px "IBM Plex Mono", ui-monospace, monospace';
+  const title = (t, y) => { ctx.font = font; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = '#6a6a6a'; ctx.fillText(t, 60, y); };
+  const band = (vals, y, h, labelY, labelColor) => {
+    const n = vals.length, pad = 60, gap = 6, bw = (W - 2 * pad - gap * (n - 1)) / n;
+    ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    vals.forEach((p, i) => { const x = pad + i * (bw + gap); ctx.fillStyle = gray(p); ctx.fillRect(x, y, bw, h); ctx.fillStyle = labelColor; ctx.fillText(p + '%', x + bw / 2, labelY); });
+  };
+  title('10% steps', 26); band([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100], 64, 200, 274, '#7a7a7a');
+  title('Near black', 330); band([0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20], 368, 220, 598, '#6a6a6a');
+  title('Ramp', 652);
+  for (let x = 0; x < W - 120; x++) { const v = Math.round(x / (W - 121) * 255); ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect(60 + x, 690, 1, 110); }
+  title('Near white', 826); band([80, 85, 88, 90, 92, 94, 96, 98, 99, 100], 864, 180, 1004, '#3a3a3a');
+}
+
+const CHECKER = [[115, 82, 68, 'Dark skin'], [194, 150, 130, 'Light skin'], [98, 122, 157, 'Blue sky'], [87, 108, 67, 'Foliage'], [133, 128, 177, 'Blue flower'], [103, 189, 170, 'Bluish green'],
+  [214, 126, 44, 'Orange'], [80, 91, 166, 'Purplish blue'], [193, 90, 99, 'Moderate red'], [94, 60, 108, 'Purple'], [157, 188, 64, 'Yellow green'], [224, 163, 46, 'Orange yellow'],
+  [56, 61, 150, 'Blue'], [70, 148, 73, 'Green'], [175, 54, 60, 'Red'], [231, 199, 31, 'Yellow'], [187, 86, 149, 'Magenta'], [8, 133, 161, 'Cyan'],
+  [243, 243, 242, 'White'], [200, 200, 200, 'Neutral 8'], [160, 160, 160, 'Neutral 6.5'], [122, 122, 121, 'Neutral 5'], [85, 85, 85, 'Neutral 3.5'], [52, 52, 52, 'Black']];
+function drawChart(ctx, W, H) {
+  ctx.fillStyle = '#1b1b1b'; ctx.fillRect(0, 0, W, H);
+  const cols = 6, pw = 250, ph = 210, gap = 34, x0 = (W - (cols * pw + (cols - 1) * gap)) / 2, y0 = (H - (4 * ph + 3 * gap)) / 2;
+  ctx.font = '500 20px "IBM Plex Mono", ui-monospace, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  CHECKER.forEach(([r, g, b, name], i) => {
+    const x = x0 + (i % cols) * (pw + gap), y = y0 + Math.floor(i / cols) * (ph + gap);
+    ctx.fillStyle = `rgb(${r},${g},${b})`; rr(ctx, x, y, pw, ph, 10); ctx.fill();
+    ctx.fillStyle = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140 ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.6)';
+    ctx.fillText(name, x + 14, y + ph - 12);
+  });
+}
+
+const SCENES = [
+  { id: 'street', name: 'Rainy night street', note: 'People at night: neon, wet streets, deep shadows', src: 'scenes/night-street.jpg' },
+  { id: 'dinner', name: 'Candlelit dinner', note: 'Very dark, faces lit only by candles', src: 'scenes/candlelit-dinner.jpg' },
+  { id: 'park', name: 'Picnic in the sun', note: 'Bright daytime with people', src: 'scenes/picnic.jpg' },
+  { id: 'reading', name: 'Reading by the window', note: 'Bright window next to dark corners', src: 'scenes/reading-window.jpg' },
+  { id: 'city', name: 'City at night', note: 'Dark scene with bright windows', draw: drawCity },
+  { id: 'room', name: 'Window-lit room', note: 'Deep shadows next to a bright window', draw: drawRoom },
+  { id: 'valley', name: 'Daylight valley', note: 'Bright daytime landscape', draw: drawValley },
+  { id: 'space', name: 'Deep space', note: 'Mostly black, with stars and a planet', draw: drawSpace },
+  { id: 'hdrsteps', name: 'HDR brightness steps', note: 'Real HDR test picture, defined in nits', make: makeHdrSteps },
+  { id: 'steps', name: 'Gray steps', note: 'Shadow and highlight steps', draw: drawSteps },
+  { id: 'chart', name: 'Color patches', note: '24 reference colors', draw: drawChart },
+];
+
+
+// ---------- HDR sources: PNG frame grabs (8/16-bit, PQ) and the built-in HDR test picture
+// Minimal PNG reader so 16-bit HDR grabs keep every bit (the browser's own decoder gives 8 bits).
+async function decodePNG(buf, headerOnly = false) {
+  const u8 = new Uint8Array(buf);
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  if (u8.length < 33 || sig.some((v, i) => u8[i] !== v)) return null;
+  const u32 = p => ((u8[p] << 24) | (u8[p + 1] << 16) | (u8[p + 2] << 8) | u8[p + 3]) >>> 0;
+  let p = 8, w = 0, h = 0, depth = 0, ctype = 0, inter = 0, cicp = null, hasICC = false;
+  const idat = [];
+  while (p + 8 <= u8.length) {
+    const len = u32(p), type = String.fromCharCode(u8[p + 4], u8[p + 5], u8[p + 6], u8[p + 7]), d = u8.subarray(p + 8, p + 8 + len);
+    if (type === 'IHDR') { w = u32(p + 8); h = u32(p + 12); depth = d[8]; ctype = d[9]; inter = d[12]; }
+    else if (type === 'cICP') cicp = { primaries: d[0], transfer: d[1], matrix: d[2], full: d[3] };
+    else if (type === 'iCCP') hasICC = true;
+    else if (type === 'IDAT') { if (headerOnly) break; idat.push(d); }
+    else if (type === 'IEND') break;
+    p += 12 + len;
+  }
+  if (headerOnly) return { w, h, depth, cicp, hasICC };
+  const chans = { 0: 1, 2: 3, 4: 2, 6: 4 }[ctype];
+  if (!w || !h || inter !== 0 || !chans || (depth !== 8 && depth !== 16) || w * h > 4096 * 4096) return { w, h, depth, cicp, hasICC, rgb: null };
+  const bpp = chans * depth / 8, stride = w * bpp;
+  const raw = new Uint8Array(await new Response(new Blob(idat).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer());
+  const px = new Uint8Array(h * stride);
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (stride + 1)], ri = y * (stride + 1) + 1, oi = y * stride, pi = oi - stride;
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? px[oi + x - bpp] : 0, b = y > 0 ? px[pi + x] : 0, c = x >= bpp && y > 0 ? px[pi + x - bpp] : 0;
+      let v = raw[ri + x];
+      if (f === 1) v += a;
+      else if (f === 2) v += b;
+      else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const q = a + b - c, pa = Math.abs(q - a), pb = Math.abs(q - b), pc = Math.abs(q - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      px[oi + x] = v & 255;
+    }
+  }
+  const N = w * h, rgb = depth === 16 ? new Uint16Array(N * 3) : new Uint8Array(N * 3), bs = depth / 8;
+  for (let i = 0; i < N; i++) for (let c = 0; c < 3; c++) {
+    const o = i * bpp + (chans >= 3 ? c : 0) * bs;
+    rgb[i * 3 + c] = depth === 16 ? (px[o] << 8) | px[o + 1] : px[o];
+  }
+  return { w, h, depth, cicp, hasICC, rgb };
+}
+// PQ code values → BT.2020 linear nits. Full range (most frame grabs) or limited (video) levels.
+function pqImageToNits(png, limited) {
+  // Without a cICP chunk (the user ticked "HDR frame grab") the HDR standard, BT.2020, is assumed.
+  const data = SGS.pqCodesToNits(png.rgb, png.depth, limited, png.cicp ? png.cicp.primaries : 9);
+  let w = png.w, h = png.h, out = data;
+  const s = Math.min(1, 4096 / Math.max(w, h));
+  if (s < 1) { const tw = Math.round(w * s), th = Math.round(h * s); out = resampleF3(data, w, h, tw, th); w = tw; h = th; }
+  return { w, h, data: out };
+}
+// 8-bit preview of an HDR picture (thumbnails, SDR fallback): soft roll-off around 203-nit white.
+function hdrPreview(hdr) {
+  const c = document.createElement('canvas'); c.width = hdr.w; c.height = hdr.h;
+  const x = c.getContext('2d'), id = x.createImageData(hdr.w, hdr.h), M = SGS.convert('bt2020', 'bt709');
+  for (let i = 0, o = 0; i < hdr.w * hdr.h * 3; i += 3, o += 4) {
+    const v = SGS.mul3(M, [hdr.data[i], hdr.data[i + 1], hdr.data[i + 2]]).map(n => {
+      const r = Math.max(0, n) / 203, t = 1.25 * r / (1 + r / 4); // 203 nits → white; brighter values clip
+      return 255 * SGS.srgbEncode(Math.min(t, 1));
+    });
+    id.data[o] = v[0]; id.data[o + 1] = v[1]; id.data[o + 2] = v[2]; id.data[o + 3] = 255;
+  }
+  x.putImageData(id, 0, 0);
+  return { canvas: c, img: { w: hdr.w, h: hdr.h, data: id.data } };
+}
+// Built-in HDR test picture, defined directly in nits (BT.2020).
+const HDR_STEPS = [0, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 50, 100, 203, 300, 400, 600, 800, 1000, 2000, 4000];
+function makeHdrSteps() {
+  const W = 1920, H = 1080, data = new Float32Array(W * H * 3);
+  const put = (x0, y0, x1, y1, rgb) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = (y * W + x) * 3; data[i] = rgb[0]; data[i + 1] = rgb[1]; data[i + 2] = rgb[2]; } };
+  const n = HDR_STEPS.length, pad = 40, gap = 6, bw = (W - 2 * pad - gap * (n - 1)) / n;
+  HDR_STEPS.forEach((v, k) => { const x0 = Math.round(pad + k * (bw + gap)); put(x0, 90, Math.round(x0 + bw), 330, [v, v, v]); });
+  // PQ ramp across the full range, 0 → 10,000 nits
+  for (let x = pad; x < W - pad; x++) { const v = SGS.pqToNits((x - pad) / (W - 2 * pad - 1)); put(x, 430, x + 1, 540, [v, v, v]); }
+  // Colors at 100 and 1,000 nits (BT.709 primaries, as most movies use), skin tone, and tiny 4,000-nit sparkles
+  const M = M709to2020, col = (rgb, L) => { const t = SGS.mul3(M, rgb), Y = LW2020[0] * t[0] + LW2020[1] * t[1] + LW2020[2] * t[2]; return t.map(v => v * L / Y); };
+  [[[1, 0, 0], 100], [[0, 1, 0], 100], [[0, 0, 1], 100], [[1, 0, 0], 1000], [[0, 1, 0], 1000], [[0, 0, 1], 1000], [[0.78, 0.55, 0.43], 120], [[0.36, 0.22, 0.16], 25]]
+    .forEach(([rgb, L], k) => { const x0 = pad + k * 230; put(x0, 650, x0 + 200, 850, col(rgb, L)); });
+  const R = mulberry(21);
+  for (let i = 0; i < 600; i++) { const x = pad + Math.floor(R() * (W - 2 * pad - 2)), y = 920 + Math.floor(R() * 118); put(x, y, x + 2, y + 2, [4000, 4000, 4000]); }
+  // Labels at 60 nits, drawn through a mask
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.font = '500 22px "IBM Plex Mono", ui-monospace, monospace'; x.textBaseline = 'top';
+  x.textAlign = 'left';
+  x.fillText('Brightness steps (nits)', pad, 50); x.fillText('Full HDR range, 0 to 10,000 nits', pad, 392);
+  x.fillText('Red, green, blue at 100 nits, then at 1,000 nits · skin tones', pad, 612); x.fillText('4,000-nit sparkles on black', pad, 882);
+  x.textAlign = 'center'; x.font = '500 18px "IBM Plex Mono", ui-monospace, monospace';
+  HDR_STEPS.forEach((v, k) => x.fillText(String(v), pad + k * (bw + gap) + bw / 2, 340));
+  const mask = x.getImageData(0, 0, W, H).data;
+  for (let i = 0, j = 0; i < W * H; i++, j += 4) if (mask[j + 3] > 0) { const a = mask[j + 3] / 255, L = 60 * a; data[i * 3] = data[i * 3] * (1 - a) + L; data[i * 3 + 1] = data[i * 3 + 1] * (1 - a) + L; data[i * 3 + 2] = data[i * 3 + 2] * (1 - a) + L; }
+  return { w: W, h: H, data };
+}
+
+// ---------- scene library (built-in + uploads)
+const uploads = [];
+let loadedBuiltins = [];
+const allScenes = () => SCENES.concat(uploads);
+const currentScene = () => allScenes().find(s => s.id === S.scene) || SCENES[0];
+function newThumb() { const c = document.createElement('canvas'); c.width = 192; c.height = 108; return c; }
+function makeThumb(sc, src) {
+  const t = sc.thumb || (sc.thumb = newThumb()), x = t.getContext('2d');
+  const sw = src.width, sh = src.height, s = Math.min(192 / sw, 108 / sh), w = sw * s, h = sh * s;
+  x.fillStyle = '#0b0b0b'; x.fillRect(0, 0, 192, 108);
+  x.imageSmoothingQuality = 'high';
+  x.drawImage(src, (192 - w) / 2, (108 - h) / 2, w, h);
+  sc.thumbDone = true;
+}
+function ensureImg(sc) {
+  if (sc.img) return;
+  if (sc.make) { sc.hdr = sc.make(); const pv = hdrPreview(sc.hdr); sc.img = pv.img; if (!sc.thumbDone) makeThumb(sc, pv.canvas); remember(sc); return; }
+  const c = document.createElement('canvas'); c.width = 1920; c.height = 1080;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  sc.draw(x, 1920, 1080);
+  sc.img = { w: 1920, h: 1080, data: x.getImageData(0, 0, 1920, 1080).data };
+  if (!sc.thumbDone) makeThumb(sc, c);
+  remember(sc);
+}
+// Keep at most three built-in scenes decoded; the rest are redrawn or re-fetched on demand.
+function remember(sc) {
+  loadedBuiltins = loadedBuiltins.filter(s => s !== sc); loadedBuiltins.push(sc);
+  while (loadedBuiltins.length > 3) { const old = loadedBuiltins.shift(); if (old !== currentScene()) { old.img = null; old.loading = null; if (old.make) old.hdr = null; dropCaches(old.id); } }
+}
+function loadPhoto(sc) {
+  if (!sc.loading) sc.loading = fetch(sc.src)
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+    .then(b => createImageBitmap(b))
+    .then(bmp => {
+      const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.drawImage(bmp, 0, 0);
+      if (bmp.close) bmp.close();
+      sc.img = { w: c.width, h: c.height, data: x.getImageData(0, 0, c.width, c.height).data };
+      if (!sc.thumbDone) makeThumb(sc, c);
+      remember(sc);
+    })
+    .catch(e => { sc.loading = null; sc.failed = true; throw e; });
+  return sc.loading;
+}
+const idle = window.requestIdleCallback ? cb => requestIdleCallback(cb, { timeout: 500 }) : cb => setTimeout(cb, 60);
+function genThumbs() {
+  const next = SCENES.find(s => !s.thumbDone && !s.failed);
+  if (!next) return;
+  if (next.src) { loadPhoto(next).then(() => idle(genThumbs), () => idle(genThumbs)); return; }
+  if (next.make) { ensureImg(next); idle(genThumbs); return; }
+  const c = document.createElement('canvas'); c.width = 1920; c.height = 1080;
+  next.draw(c.getContext('2d'), 1920, 1080);
+  makeThumb(next, c);
+  idle(genThumbs);
+}
+function renderSceneStrip() {
+  const el = $('scenes');
+  el.textContent = '';
+  const add = document.createElement('label');
+  add.className = 'scene-add'; add.htmlFor = 'fileIn';
+  add.innerHTML = '<span>+ Add your own image<br><span class="hint">or drag one here</span></span>';
+  el.append(add);
+  for (const sc of allScenes()) {
+    const wrap = document.createElement('div'); wrap.className = 'scene-wrap';
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'scene'; b.dataset.id = sc.id; b.title = sc.note || sc.name;
+    b.setAttribute('aria-pressed', String(sc.id === S.scene));
+    if (!sc.thumb) sc.thumb = newThumb();
+    const label = document.createElement('span'); label.textContent = sc.name;
+    b.append(sc.thumb, label);
+    if (sc.make || sc.pq) { const t = document.createElement('span'); t.className = 'hdrb'; t.textContent = 'HDR'; b.append(t); }
+    wrap.append(b);
+    if (sc.upload) {
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'rm'; rm.dataset.rm = sc.id; rm.textContent = '×'; rm.setAttribute('aria-label', 'Remove ' + sc.name);
+      wrap.append(rm);
+    }
+    el.append(wrap);
+  }
+}
+function dropCaches(id) {
+  for (const m of [nCache, hdrBaseCache, hdrNCache, gradedCache]) for (const k of [...m.keys()]) if (k === id || k.startsWith(id + '|')) m.delete(k);
+}
+function selectScene(id) {
+  S.scene = id;
+  const sc = currentScene();
+  if ((sc.make || sc.pq) && S.content !== 'hdr') S.content = 'hdr';
+  renderContent();
+  for (const b of document.querySelectorAll('.scene')) b.setAttribute('aria-pressed', String(b.dataset.id === id));
+  invalidate(); persist();
+}
+async function addFiles(files) {
+  let lastId = null, bad = 0, hdrFound = false, maybe16 = false, badColor = null;
+  for (const f of files) {
+    if (!f || !/^image\//.test(f.type)) { bad++; continue; }
+    if (uploads.length >= 20) { toast('Up to 20 of your own images at a time. Remove one to add more.'); break; }
+    try {
+      let bmp;
+      try { bmp = await createImageBitmap(f, { imageOrientation: 'from-image' }); } catch (e) { bmp = await createImageBitmap(f); }
+      const s = Math.min(1, 4096 / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.imageSmoothingQuality = 'high';
+      x.drawImage(bmp, 0, 0, w, h);
+      if (bmp.close) bmp.close();
+      const sc = { id: 'u_' + uid(), name: (f.name || 'Pasted image').replace(/\.[a-z0-9]+$/i, '').slice(0, 40), note: `${w}×${h}${s < 1 ? ' (scaled to 4096 px)' : ''}`, upload: true, img: { w, h, data: x.getImageData(0, 0, w, h).data } };
+      makeThumb(sc, c);
+      if (f.type === 'image/png') {
+        sc.isPng = true; sc.file = f;
+        const head = await decodePNG(await f.slice(0, 1 << 16).arrayBuffer(), true).catch(() => null);
+        const supported = head && head.cicp && head.cicp.transfer === 16 && head.cicp.matrix === 0 && SGS.CICP_PRIMARIES[head.cicp.primaries];
+        if (head && head.cicp && head.cicp.transfer === 16 && !supported) badColor = head.cicp.primaries;
+        if (supported) {
+          sc.png = await decodePNG(await f.arrayBuffer());
+          if (sc.png && sc.png.rgb) { sc.limited = sc.png.cicp.full === 0; sc.hdr = pqImageToNits(sc.png, sc.limited); sc.pq = true; makeThumb(sc, hdrPreview(sc.hdr).canvas); hdrFound = true; }
+        } else if (head && head.depth === 16) maybe16 = true;
+      }
+      uploads.push(sc); lastId = sc.id;
+    } catch (e) { bad++; }
+  }
+  if (bad) toast(bad === 1 ? "One file couldn't be read as an image. Use PNG, JPEG or WebP." : `${bad} files couldn't be read as images. Use PNG, JPEG or WebP.`);
+  if (hdrFound) { S.content = 'hdr'; toast('HDR frame grab found. Showing it as HDR.'); }
+  else if (badColor !== null) toast(`That HDR PNG uses a color space this app can't read yet (cICP primaries ${badColor}). It's shown as SDR.`);
+  else if (maybe16) toast('16-bit PNG added. If it is an HDR frame grab, switch to HDR and tick "This picture is an HDR frame grab".');
+  if (lastId) { S.scene = lastId; S.zoom = 'fit'; renderView(); renderContent(); renderSceneStrip(); invalidate(); persist(); }
+}
+function removeUpload(id) {
+  const i = uploads.findIndex(u => u.id === id);
+  if (i < 0) return;
+  uploads.splice(i, 1);
+  dropCaches(id);
+  if (S.scene === id) S.scene = SCENES[0].id;
+  renderSceneStrip(); invalidate();
+}
+
+// ---------- layout & render
+const stage = $('stage'), frame = $('frame'), cellA = $('cellA'), cellB = $('cellB'), cvA = $('cvA'), cvB = $('cvB');
+let last = null, raf = 0;
+const ctxA = makeCtx(cvA), ctxB = makeCtx(cvB);
+// rAF can pause (hidden tabs, thumbnail captures, some embedded views), so a timer backs it up.
+// render() clears the flag, so whichever fires second does nothing.
+function invalidate() {
+  if (raf) return;
+  raf = 1;
+  const run = () => { if (raf) render(); };
+  if (document.hidden) setTimeout(run, 16);
+  else { requestAnimationFrame(run); setTimeout(run, 150); }
+}
+function layout(iw, ih) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const side = S.view === 'side', full = S.zoom === 'full' && !side;
+  stage.dataset.view = S.view; stage.dataset.zoom = full ? 'full' : 'fit';
+  const avail = Math.max(200, stage.clientWidth);
+  const maxH = Math.max(220, Math.min(window.innerHeight * 0.72, window.innerHeight - 250, 1100));
+  let cssW, cssH, tw, th;
+  if (full) { tw = iw; th = ih; cssW = iw / dpr; cssH = ih / dpr; }
+  else {
+    const cw = side ? (avail - GAP) / 2 : avail, s = Math.min(cw / iw, maxH / ih);
+    cssW = Math.floor(iw * s); cssH = Math.floor(ih * s);
+    tw = Math.max(1, Math.min(iw, Math.round(cssW * dpr))); th = Math.max(1, Math.round(tw * ih / iw));
+  }
+  frame.style.width = (side ? cssW * 2 + GAP : cssW) + 'px';
+  const caps = $('caps');
+  caps.dataset.view = S.view;
+  caps.style.width = Math.min(avail, side ? cssW * 2 + GAP : cssW) + 'px';
+  for (const c of caps.children) c.style.width = side ? cssW + 'px' : '';
+  frame.style.height = cssH + 'px';
+  for (const c of [cellA, cellB]) { c.style.width = cssW + 'px'; c.style.height = cssH + 'px'; }
+  return { tw, th };
+}
+function sceneReady(sc) {
+  if (sc.img) return true;
+  if (sc.src) { loadPhoto(sc).then(invalidate, () => toast("That picture didn't load. Pick another one.")); return false; }
+  ensureImg(sc);
+  return true;
+}
+function render() {
+  raf = 0;
+  const sc = currentScene();
+  if (!sceneReady(sc)) return;
+  const L = layout(sc.img.w, sc.img.h);
+  const pA = profileFor('A'), pB = profileFor('B'), hdr = S.content === 'hdr', lw = hdr ? LW2020 : LW709;
+  let nA, nB, M, hdrInfo = null;
+  if (hdr) {
+    const base = getHdrBase(sc), srcMax = hdrSourceMax(base), tA = tmTarget('A', pA), tB = tmTarget('B', pB);
+    nA = getHdrN(base, srcMax, tA, L.tw, L.th);
+    nB = Math.abs(tB - tA) < 1e-6 ? nA : getHdrN(base, srcMax, tB, L.tw, L.th);
+    M = OUT.from2020;
+    hdrInfo = { srcMax, peak: base.p999, tA, tB, graded: !sc.hdr };
+  } else {
+    nA = getN(sc, pA, L.tw, L.th);
+    nB = toneKey(pA) === toneKey(pB) ? nA : getN(sc, pB, L.tw, L.th);
+    M = OUT.from709;
+  }
+  const sA = SGS.simSide(S, 'A', pA, nA, L.tw, lw), sB = SGS.simSide(S, 'B', pB, nB, L.tw, lw);
+  const ref = S.display.mode === 'fixed' ? S.display.monitor : Math.max(sA.peakRef, sB.peakRef);
+  const stA = paint(cvA, ctxA, nA, sA, 1 / ref, M), stB = paint(cvB, ctxB, nB, sB, 1 / ref, M);
+  // Washed out: projected luminance (B_f + S·nY)·g below the room light, i.e. nY below (amb/g − B_f)/S.
+  for (const [st, sim, nE] of [[stA, sA, nA], [stB, sB, nB]]) st.wash = sim.ambN > 0 ? SGS.fractionBelow(nE, (sim.ambN / sim.gC - sim.Bf) / sim.span) : 0;
+  last = { sc, nA, nB, sA, sB, ref, stA, stB, hdr: hdrInfo };
+  updateResults();
+}
+
+// ---------- results
+function chg(x, y, lowerBetter) {
+  if (!(x > 0) || !(y > 0)) return '';
+  const r = y / x;
+  if (Math.abs(r - 1) < 0.005) return '<span class="same">same</span>';
+  const p = (r - 1) * 100, good = lowerBetter ? p < 0 : p > 0;
+  return `<span class="${good ? 'up' : 'down'}">${p > 0 ? '+' : '−'}${Math.abs(p).toFixed(Math.abs(p) < 10 ? 1 : 0)}%</span>`;
+}
+function updateResults() {
+  if (!last) return;
+  const { sA: a, sB: b, stA, stB, ref } = last, u = U(), amb = S.ambient > 0;
+  const nmA = esc(S.screenA.name || 'Screen A'), nmB = esc(S.screenB.name || 'Screen B');
+  $('capAName').textContent = `${S.screenA.name || 'Screen A'}, ${fmtG(S.screenA.size)}"`;
+  $('capBName').textContent = `${S.screenB.name || 'Screen B'}, ${fmtG(S.screenB.size)}"`;
+  $('capASet').textContent = a.prof.name;
+  $('capBSet').textContent = b.prof.name;
+  $('capAVal').textContent = `${fmtL(a.whiteC)} ${u}`;
+  $('capBVal').textContent = `${fmtL(b.whiteC)} ${u}`;
+  $('scaleInfo').textContent = `Monitor white = ${fmtL(ref)} ${u} (${S.display.mode === 'fixed' ? 'your monitor' : 'auto'})`;
+  const clip = Math.max(stA.clip, stB.clip);
+  $('clipChip').hidden = !(S.display.mode === 'fixed' && clip > 0.0005);
+  $('clipChip').textContent = `${pctTxt(clip)} of the picture is too bright for your monitor`;
+  $('dispInfo').textContent = S.display.mode === 'fixed'
+    ? `Shown at real brightness. Parts brighter than your monitor (${fmtL(S.display.monitor)} ${u}) show as flat white.`
+    : `The brighter screen is shown as bright as your monitor can go. Both pictures use the same scale, so the difference you see is real.`;
+
+  const cDark = s => s.whiteC / s.blackC, cRoom = s => (s.whiteC + s.ambN) / (s.blackC + s.ambN);
+  const rows = [];
+  const tr = (label, va, vb, c, cls = '') => rows.push(`<tr class="${cls}"><th scope="row">${label}</th><td class="ca">${va}</td><td class="cb">${vb}</td><td>${c}</td></tr>`);
+  tr(`White (${u})`, fmtL(a.whiteC), fmtL(b.whiteC), chg(a.whiteC, b.whiteC));
+  tr(`Black (${u})`, fmtL(a.blackC), fmtL(b.blackC), chg(a.blackC, b.blackC, true));
+  tr('Contrast, dark room', ratio(cDark(a)), ratio(cDark(b)), chg(cDark(a), cDark(b)));
+  if (amb) {
+    tr(`Ambient light on the screen (${u})`, fmtL(a.ambN), fmtL(b.ambN), chg(a.ambN, b.ambN, true));
+    tr('Contrast with ambient light', ratio(cRoom(a)), ratio(cRoom(b)), chg(cRoom(a), cRoom(b)));
+  }
+  rows.push(`<tr class="sec"><th scope="row" colspan="4">This picture: ${esc(last.sc.name)}</th></tr>`);
+  tr(`Average brightness (${u})`, fmtL(stA.mean), fmtL(stB.mean), chg(stA.mean, stB.mean));
+  tr(`Darkest black (${u})`, fmtL(a.floorC), fmtL(b.floorC), chg(a.floorC, b.floorC, true));
+  if (last.hdr) tr('Bright parts squeezed by tone mapping', pctTxt(last.nA.squeezed), pctTxt(last.nB.squeezed), chg(last.nA.squeezed || 1e-9, last.nB.squeezed || 1e-9, true));
+  if (amb) tr('Washed out by ambient light', pctTxt(stA.wash), pctTxt(stB.wash), chg(stA.wash || 1e-9, stB.wash || 1e-9, true));
+  $('rt').innerHTML = `<caption>Middle of the screen, from your seat${S.seat ? ` (${sideText()} to the side)` : ''}</caption><thead><tr><th scope="col"></th><th scope="col" class="ca">A · ${nmA}</th><th scope="col" class="cb">B · ${nmB}</th><th scope="col">Difference</th></tr></thead><tbody>${rows.join('')}</tbody>`;
+
+  // all profiles
+  const ap = S.profiles.map(p => {
+    const wA = p.white * a.gC, bA = p.black * a.gC, wB = p.white * b.gC, bB = p.black * b.gC;
+    const c = amb ? `${ratio((wA + a.ambN) / (bA + a.ambN))} → ${ratio((wB + b.ambN) / (bB + b.ambN))}` : ratio(p.white / p.black);
+    const cur = p.id === a.prof.id || p.id === b.prof.id;
+    return `<tr class="${cur ? 'cur' : ''}"><th scope="row">${esc(p.name)}${p.example ? ' <span class="pill">Example</span>' : ''}</th><td class="ca">${fmtL(wA)}</td><td class="ca">${fmtL(bA)}</td><td class="cb">${fmtL(wB)}</td><td class="cb">${fmtL(bB)}</td><td>${c}</td></tr>`;
+  }).join('');
+  $('allp').innerHTML = `<caption>Every reading on both screens (${u}). Highlighted rows are showing now.</caption><thead><tr><th scope="col">Setting</th><th scope="col" class="ca">A white</th><th scope="col" class="ca">A black</th><th scope="col" class="cb">B white</th><th scope="col" class="cb">B black</th><th scope="col">${amb ? 'Contrast with ambient light, A → B' : 'Contrast, dark room'}</th></tr></thead><tbody>${ap}</tbody>`;
+
+  $('verdict').innerHTML = verdictHTML(a, b, stA, stB, nmA, nmB);
+}
+function verdictHTML(a, b, stA, stB, nmA, nmB) {
+  const out = [], u = U(), r = b.whiteC / a.whiteC;
+  const diffProf = a.prof.id !== b.prof.id;
+  const profNote = diffProf ? ` (A on ${esc(a.prof.name)}, B on ${esc(b.prof.name)})` : '';
+  if (Math.abs(r - 1) < 0.005) out.push(`<p><span class="badge b">B</span> <strong>${nmB}</strong> and <span class="badge a">A</span> <strong>${nmA}</strong> are equally bright here${profNote}.</p>`);
+  else {
+    const pc = Math.abs(r - 1) * 100, per = Math.abs(Math.pow(r, 1 / 3) - 1) * 100, word = r > 1 ? 'brighter' : 'dimmer';
+    out.push(`<p><span class="badge b">B</span> <strong>${nmB}</strong> is <strong class="${r > 1 ? 'up' : 'down'}">${pc.toFixed(pc < 10 ? 1 : 0)}% ${word}</strong> than <span class="badge a">A</span> <strong>${nmA}</strong>${profNote}: ${fmtL(b.whiteC)} vs ${fmtL(a.whiteC)} ${u}. To your eye that looks about ${per.toFixed(0)}% ${word}.</p>`);
+  }
+  if (last.hdr) {
+    const h = last.hdr, tmText = S.hdr.tm === 'dynamic' ? 'Tone mapping adjusts to this picture.' : `Tone mapping is fixed for ${S.hdr.tm === 'static4000' ? '4,000' : '1,000'}-nit movies.`;
+    const tail = S.hdr.bMode === 'retuned'
+      ? `With tone mapping set up for B, darker and middle parts look about the same on both screens, and B has more room for the bright parts: they're squeezed in ${pctTxt(last.nA.squeezed)} of the picture on A and ${pctTxt(last.nB.squeezed)} on B.`
+      : `Tone mapping is left as it was for A, so B shows the whole picture ${Math.abs(r - 1) < 0.005 ? 'at the same brightness' : `${(Math.abs(r - 1) * 100).toFixed(0)}% ${r > 1 ? 'brighter' : 'dimmer'}`}.`;
+    out.push(`<p>HDR: the brightest parts of this picture are about ${fmtL(h.peak)} ${u}${h.graded ? ' (an HDR grade made by this app)' : ''}. A shows up to ${fmtL(a.whiteC)} and B up to ${fmtL(b.whiteC)} ${u}. ${tmText} ${tail}</p>`);
+  }
+  if (Math.abs(S.screenB.size - S.screenA.size) > 0.5) {
+    const af = areaFactor(S.screenB), gr = S.screenB.gain / S.screenA.gain, bigger = S.screenB.size > S.screenA.size;
+    const areaPct = Math.round(Math.abs(1 / af - 1) * 100), sizePct = Math.round(Math.abs(af - 1) * 100), gainPct = Math.round(Math.abs(gr - 1) * 100);
+    out.push(`<p>B is ${bigger ? 'bigger' : 'smaller'} (${fmtG(S.screenB.size)} vs ${fmtG(S.screenA.size)} inches), so the same projector light is spread over ${areaPct}% ${bigger ? 'more' : 'less'} area. That makes it ${sizePct}% ${bigger ? 'dimmer' : 'brighter'}${Math.abs(gr - 1) > 0.005 ? `, while the gain makes it ${gainPct}% ${gr > 1 ? 'brighter' : 'dimmer'}` : ''}.</p>`);
+  }
+  if (S.ambient > 0) {
+    const cA = (a.whiteC + a.ambN) / (a.blackC + a.ambN), cB = (b.whiteC + b.ambN) / (b.blackC + b.ambN);
+    out.push(`<p>With ambient light, contrast drops to <strong class="ta">${ratio(cA)}</strong> on A and <strong class="tb">${ratio(cB)}</strong> on B. Ambient light washes out ${pctTxt(stA.wash)} of this picture on A and ${pctTxt(stB.wash)} on B.</p>`);
+  } else if (!diffProf) {
+    out.push(`<p>With the lights off, both have the same contrast (${ratio(a.whiteC / a.blackC)}), because the screen changes black by the same amount as white. The difference shows up with ambient light.</p>`);
+  }
+  if (S.seat > 0) {
+    const fa = falloff(S.screenA, S.seat) * 100, fb = falloff(S.screenB, S.seat) * 100;
+    out.push(`<p>Sitting ${sideText()} to the side, A keeps ${fa.toFixed(0)}% of its brightness and B keeps ${fb.toFixed(0)}%.</p>`);
+  }
+  for (const s of [a, b]) {
+    if (s.dyn && s.irisS > (s.prof.black / s.prof.blackOpen) * 1.5) {
+      out.push(`<p>Dynamic iris: bright parts of this picture keep the iris ${s.irisS > 0.9 ? '' : 'partly '}open, so black here is ${fmtL(s.Bf * s.gC)} ${u}, not the ${fmtL(s.blackC)} ${u} you measured on an all-black picture.</p>`);
+      break;
+    }
+  }
+  if (S.profiles.length > 1) {
+    const target = a.whiteC;
+    let best = null;
+    for (const p of S.profiles) { const w = p.white * b.gC; if (w >= target * 0.97 && (!best || w < best.w)) best = { p, w }; }
+    if (best && best.p.id !== b.prof.id) {
+      const bb = best.p.black * b.gC, d = (bb / a.blackC - 1) * 100;
+      const blk = d < -0.5 ? `<strong class="up">${Math.abs(d).toFixed(0)}% deeper black</strong>` : d > 0.5 ? `${d.toFixed(0)}% lighter black` : 'about the same black';
+      out.push(`<p>Tip: on B, <strong>${esc(best.p.name)}</strong> gives about the brightness you have now (${fmtL(best.w)} vs ${fmtL(target)} ${u}) with ${blk}.</p>`);
+    }
+  }
+  out.push(sureHTML(a, b));
+  const angle = S.seat > 0 || S.geo.on ? ' × side-seat dimming' : '';
+  const sizePart = Math.abs(S.screenB.size - S.screenA.size) > 0.5 ? ` × (${fmtG(S.screenA.size)} ÷ ${fmtG(S.screenB.size)})²` : '';
+  out.push(`<p class="math">How B is worked out: ${fmtL(b.prof.white)} ${u} × ${fmtG(S.screenB.gain)} ÷ ${fmtG(S.screenA.gain)}${sizePart}${angle} = ${fmtL(b.whiteC)} ${u}</p>`);
+  return out.join('');
+}
+
+// Which inputs are measured and which are estimates, in one line.
+function sureHTML(a, b) {
+  const notes = [];
+  const example = a.prof.example || b.prof.example;
+  if (example) notes.push('The projector readings are examples, not yours.');
+  if (!example && (a.prof.tone !== 'table' || b.prof.tone !== 'table')) notes.push("Shadows use a standard curve. Load your grayscale readings (Edit reading → Load from a measurement file) for exact dark scenes.");
+  if (!S.screenB.gainMeasured) notes.push(S.screenA.gainMeasured
+    ? "B's gain is the maker's number but yours is measured, so B may look a little too bright."
+    : "B's gain is the maker's number, which can be off by about 10%.");
+  if (S.ambient > 0 && !S.screenB.rejMeasured) notes.push('How much ambient light each screen blocks is a typical number.');
+  if (S.seat > 0 || S.geo.on) notes.push('Dimming from the side is an estimate.');
+  if (last && last.hdr) notes.push(last.hdr.graded ? 'HDR uses the standard tone-mapping curve, and this picture is an SDR photo given an HDR grade by the app.' : 'HDR uses the standard tone-mapping curve; your projector or processor tone-maps in its own way.');
+  if (S.screenB.size > S.screenA.size + 0.5) notes.push('If you zoom the lens to fill the bigger screen, some projectors lose a little extra light.');
+  const lvl = example ? 'Rough' : notes.length ? 'Good' : 'High';
+  const tip = example ? ' Add your own readings to fix this.'
+    : !S.screenB.gainMeasured ? ' To make it exact, measure a sample of screen B (Screen B → Fine-tune).' : '';
+  const body = notes.length ? notes.join(' ') + tip : 'Based on your own readings and a measured sample of screen B.';
+  return `<p class="sure"><span class="lvl ${lvl.toLowerCase()}">How sure: ${lvl}</span>${body}</p>`;
+}
+
+// ---------- pixel probe
+function probeMove(e) {
+  const probe = $('probe');
+  if (!last || e.pointerType === 'touch') { probe.hidden = true; return; }
+  let rect = null;
+  if (S.view === 'side') { for (const c of [cellA, cellB]) { const r = c.getBoundingClientRect(); if (e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom) rect = r; } }
+  else rect = frame.getBoundingClientRect();
+  if (!rect) { probe.hidden = true; return; }
+  const u = (e.clientX - rect.left) / rect.width, v = (e.clientY - rect.top) / rect.height;
+  if (u < 0 || u >= 1 || v < 0 || v >= 1) { probe.hidden = true; return; }
+  const { nA, nB, sA, sB, sc } = last;
+  const x = Math.min(nA.w - 1, Math.floor(u * nA.w)), y = Math.min(nA.h - 1, Math.floor(v * nA.h));
+  let src = '';
+  if (sc.img) { const sx = Math.min(sc.img.w - 1, Math.floor(u * sc.img.w)), sy = Math.min(sc.img.h - 1, Math.floor(v * sc.img.h)), i = (sy * sc.img.w + sx) * 4, d = sc.img.data; src = ''; }
+  probe.innerHTML = `${src}<div><span class="ta">A</span> ${fmtL(pixelY(sA, nA, x, y))} ${U()}</div><div><span class="tb">B</span> ${fmtL(pixelY(sB, nB, x, y))} ${U()}</div>`;
+  const sr = stage.getBoundingClientRect();
+  let px = e.clientX - sr.left + stage.scrollLeft + 14, py = e.clientY - sr.top + stage.scrollTop + 14;
+  probe.hidden = false;
+  if (e.clientX - sr.left + 14 + probe.offsetWidth > sr.width) px -= probe.offsetWidth + 28;
+  if (e.clientY - sr.top + 14 + probe.offsetHeight > sr.height) py -= probe.offsetHeight + 28;
+  probe.style.left = px + 'px'; probe.style.top = py + 'px';
+}
+
+// ---------- controls
+let toastT = 0;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3600); }
+function changed() { persist(); invalidate(); }
+function setPressed(groupId, attr, val) { for (const b of $(groupId).querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset[attr] === String(val))); }
+function onNum(el, fn) { el.addEventListener('input', () => { const v = parseFloat(el.value); if (Number.isFinite(v)) { fn(v); changed(); } }); }
+
+function renderProfiles() {
+  const opts = S.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}${p.example ? ' (example)' : ''}</option>`).join('');
+  for (const id of ['profSel', 'profSelA', 'profSelB']) $(id).innerHTML = opts;
+  $('profSel').value = S.profA; $('profSelA').value = S.profA; $('profSelB').value = S.linked ? S.profA : S.profB;
+  $('unlink').checked = !S.linked; $('linkedProf').hidden = !S.linked; $('splitProf').hidden = S.linked;
+  const u = U();
+  $('plist').innerHTML = S.profiles.map(p => {
+    const inUse = p.id === S.profA || (!S.linked && p.id === S.profB);
+    const tone = p.tone === 'table' ? ' · own curve' : p.tone === 'gamma' ? ` · gamma ${p.gamma}` : '';
+    return `<li class="pitem${inUse ? ' on' : ''}" data-id="${esc(p.id)}">
+      <div class="ptop"><span class="pname">${esc(p.name)}${p.example ? '<span class="pill">Example</span>' : ''}</span><span class="pmeta">${fmtL(p.white)} / ${fmtL(p.black)} ${u}</span></div>
+      <div class="pmeta">${ratio(p.white / p.black)}${p.iris === 'dynamic' ? ` · dynamic iris${p.blackOpen ? ` (off: ${fmtL(p.blackOpen)})` : ''}` : ''}${tone}${p.ansi ? ` · checkerboard ${ratio(p.ansi)}` : ''}</div>
+      ${p.notes ? `<div class="hint">${esc(p.notes)}</div>` : ''}
+      <div class="pacts"><button type="button" class="btn small" data-act="edit">Edit</button><button type="button" class="btn small" data-act="dup"${S.profiles.length >= MAXP ? ' disabled' : ''}>Duplicate</button><button type="button" class="btn small" data-act="del"${S.profiles.length <= 1 ? ' disabled' : ''}>Delete</button></div>
+    </li>`;
+  }).join('');
+  $('profCount').textContent = `${S.profiles.length} of ${MAXP}`;
+  $('addProf').disabled = S.profiles.length >= MAXP;
+  $('exNote').hidden = !S.profiles.some(p => p.example);
+  $('clearEx').disabled = !S.profiles.some(p => !p.example);
+  $('clearEx').title = $('clearEx').disabled ? 'Add one of your own readings first' : '';
+}
+function renderScreens() {
+  for (const k of ['a', 'b']) {
+    const s = k === 'a' ? S.screenA : S.screenB;
+    $(k + 'Preset').value = PRESETS.some(p => p.id === s.preset) ? s.preset : 'custom';
+    $(k + 'Name').value = s.name; $(k + 'Gain').value = s.gain; $(k + 'Size').value = s.size; $(k + 'Rej').value = s.rej; $(k + 'Half').value = s.half;
+  }
+}
+const AMB_MIN = 0.01, AMB_MAX = 300;
+const ambToPos = v => v <= 0 ? 0 : clamp(Math.round(1000 * Math.log(v / AMB_MIN) / Math.log(AMB_MAX / AMB_MIN)), 1, 1000);
+const posToAmb = p => p <= 0 ? 0 : Number((AMB_MIN * Math.pow(AMB_MAX / AMB_MIN, p / 1000)).toPrecision(2));
+function renderRoom(skipNum) {
+  $('ambRange').value = ambToPos(S.ambient);
+  if (!skipNum) $('ambNum').value = S.ambient ? inVal(S.ambient) : '0';
+  const rejA = clamp(S.screenA.rej, 0, 95) / 100, rejB = clamp(S.screenB.rej, 0, 95) / 100, ambB = S.ambient * (1 - rejB) / (1 - rejA);
+  $('ambDerived').innerHTML = S.ambient > 0
+    ? `Screen <span class="tb">B</span> gets ${fmtL(ambB)} ${U()} of the same light${rejA === rejB ? ' (it blocks the same amount as A)' : ` (B blocks ${S.screenB.rej}%, A blocks ${S.screenA.rej}%)`}.`
+    : 'Dark room. Slide right to add lamp or window light.';
+}
+function renderSeat() {
+  $('seat').value = S.seat; $('seatOut').textContent = sideText();
+  $('geoOn').checked = S.geo.on; $('geoBox').hidden = !S.geo.on;
+  $('geoAspect').value = S.geo.aspect; $('geoDist').value = S.geo.dist; $('geoDistU').value = S.geo.distUnit;
+}
+function renderDisplay() {
+  setPressed('dispSeg', 'mode', S.display.mode);
+  $('monBox').hidden = S.display.mode !== 'fixed';
+  $('monNits').value = inVal(S.display.monitor);
+}
+function renderView() {
+  setPressed('viewSeg', 'view', S.view);
+  setPressed('zoomSeg', 'zoom', S.zoom);
+  for (const b of $('zoomSeg').querySelectorAll('button')) b.disabled = S.view === 'side' && b.dataset.zoom === 'full';
+  $('zoomSeg').title = S.view === 'side' ? 'Full size works in Split and Flip' : '';
+  $('flipBtn').hidden = S.view !== 'flip';
+  stage.dataset.show = 'a'; $('caps').dataset.show = 'a'; $('flipBtn').textContent = 'Show B';
+  stage.style.setProperty('--split', (S.split * 100) + '%');
+  $('divider').setAttribute('aria-valuenow', String(Math.round(S.split * 100)));
+}
+function renderContent() {
+  setPressed('contentSeg', 'content', S.content);
+  $('hdrPanel').hidden = S.content !== 'hdr';
+  $('hdrTm').value = S.hdr.tm;
+  setPressed('hdrBSeg', 'bmode', S.hdr.bMode);
+  if (document.activeElement !== $('hdrTarget')) $('hdrTarget').value = S.hdr.target || '';
+  const sc = currentScene();
+  $('pqRow').hidden = !(sc.upload && sc.isPng);
+  $('isPQ').checked = !!sc.pq;
+  $('pqRange').value = sc.limited ? 'limited' : 'full';
+}
+function renderUnits() {
+  setPressed('unitSeg', 'units', S.units);
+  for (const el of document.querySelectorAll('.u')) el.textContent = U();
+  $('gainLuxU').textContent = S.units === 'ftl' ? 'fc' : 'lux';
+}
+function refreshAll() {
+  renderUnits(); renderProfiles(); renderScreens(); renderRoom(); renderSeat(); renderDisplay(); renderView(); renderContent(); renderSceneStrip(); invalidate();
+}
+
+// profiles: selection & list
+$('profSel').addEventListener('change', e => { S.profA = e.target.value; S.profB = S.profA; renderProfiles(); changed(); });
+$('profSelA').addEventListener('change', e => { S.profA = e.target.value; renderProfiles(); changed(); });
+$('profSelB').addEventListener('change', e => { S.profB = e.target.value; renderProfiles(); changed(); });
+$('unlink').addEventListener('change', e => { S.linked = !e.target.checked; if (!S.linked) S.profB = S.profA; renderProfiles(); changed(); });
+$('unitSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.units = b.dataset.units; refreshAll(); persist(); });
+$('plist').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.closest('.pitem').dataset.id, p = S.profiles.find(q => q.id === id); if (!p) return;
+  if (b.dataset.act === 'edit') openProfile(p);
+  else if (b.dataset.act === 'dup' && S.profiles.length < MAXP) {
+    const c = sanitizeProfile({ ...p, id: uid(), name: (p.name + ' copy').slice(0, 40), example: false });
+    S.profiles.splice(S.profiles.indexOf(p) + 1, 0, c); renderProfiles(); changed();
+  } else if (b.dataset.act === 'del') {
+    if (b.dataset.confirm !== '1') {
+      b.dataset.confirm = '1'; b.textContent = 'Confirm delete'; b.classList.add('danger');
+      setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ''; b.textContent = 'Delete'; b.classList.remove('danger'); } }, 3500);
+      return;
+    }
+    S.profiles = S.profiles.filter(q => q.id !== id);
+    if (!S.profiles.some(q => q.id === S.profA)) S.profA = S.profiles[0].id;
+    if (!S.profiles.some(q => q.id === S.profB)) S.profB = S.profA;
+    renderProfiles(); changed();
+  }
+});
+$('addProf').addEventListener('click', () => openProfile(null));
+$('clearEx').addEventListener('click', () => {
+  const mine = S.profiles.filter(p => !p.example); if (!mine.length) return;
+  S.profiles = mine;
+  if (!mine.some(p => p.id === S.profA)) S.profA = mine[0].id;
+  if (!mine.some(p => p.id === S.profB)) S.profB = S.profA;
+  renderProfiles(); changed();
+});
+
+// profile dialog
+let editing = null;
+const dlg = $('profDlg');
+function parseTableText(text) {
+  const rows = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const t = line.trim(); if (!t || /^[#a-z]/i.test(t)) continue;
+    const nums = t.split(/[\s,;]+/).map(Number).filter(Number.isFinite);
+    if (nums.length >= 2) rows.push([nums[0], nums[1]]);
+  }
+  if (!rows.length) return [];
+  const f = Math.max(...rows.map(r => r[0])) <= 1 ? 100 : 1;
+  return rows.map(([v, L]) => [v * f, fromU(L)]).filter(([v, L]) => v >= 0 && v <= 100 && L >= 0).sort((a, b) => a[0] - b[0]);
+}
+// ColourSpace (.bcs XML) or CSV → gray readings as [stimulus %, nits]
+function parseMeasurementFile(text, fileName) {
+  if (/<builder_color_space/i.test(text)) {
+    const doc = new DOMParser().parseFromString(text, 'application/xml'), acc = new Map();
+    for (const p of doc.querySelectorAll('data > patch')) {
+      const st = p.querySelector('stimuli'), Y = p.querySelector('results XYZ Y');
+      if (!st || !Y) continue;
+      const r = +st.querySelector('red')?.textContent, g = +st.querySelector('green')?.textContent, b = +st.querySelector('blue')?.textContent, y = +Y.textContent;
+      if (!(Math.abs(r - g) < 1e-6 && Math.abs(r - b) < 1e-6) || !isFinite(r) || !isFinite(y)) continue;
+      const k = Math.round(r * 1e6) / 1e6, a = acc.get(k) || [];
+      a.push(y); acc.set(k, a);
+    }
+    const rows = [...acc.entries()].sort((a, b) => a[0] - b[0]).map(([v, ys]) => [v * 100, ys.reduce((t, y) => t + y, 0) / ys.length]);
+    return { name: doc.documentElement.getAttribute('name') || fileName, rows };
+  }
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const split = l => l.split(/[,;\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
+  const isLum = c => /^Y(\s|\(|$)/.test(c) || /lumin|cd\/m|nits|ftl|\bfl\b/i.test(c);
+  let si = 0, li = 1, ftl = false;
+  for (const l of lines.slice(0, 10)) {
+    const cols = split(l);
+    const a = cols.findIndex(c => /ire|stim|level|input|percent|%|target/i.test(c)), b = cols.findIndex(isLum);
+    if (a >= 0 && b >= 0) { si = a; li = b; ftl = /ftl|\bfl\b/i.test(cols[b]); break; }
+  }
+  let rows = [];
+  for (const l of lines) {
+    const cols = split(l), v = parseFloat(cols[si]), L = parseFloat(cols[li]);
+    if (isFinite(v) && isFinite(L) && /^[-+]?[\d.]+(e[-+]?\d+)?%?$/i.test(cols[si] || '')) rows.push([v, ftl ? L * FTL : L]);
+  }
+  if (rows.length) { const f = Math.max(...rows.map(r => r[0])) <= 1 ? 100 : 1; rows = rows.map(([v, L]) => [v * f, L]).filter(([v, L]) => v >= 0 && v <= 100 && L >= 0).sort((a, b) => a[0] - b[0]); }
+  return { name: fileName, rows };
+}
+$('pFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const res = parseMeasurementFile(await f.text(), f.name.replace(/\.[a-z0-9]+$/i, ''));
+  if (!res || res.rows.length < 3) { $('pFileInfo').textContent = "No gray readings found in that file. It needs readings where red, green and blue are equal."; return; }
+  let rows = res.rows;
+  if (rows.length > 128) { const step = (rows.length - 1) / 127; rows = Array.from({ length: 128 }, (_, i) => rows[Math.round(i * step)]); }
+  const ends = SGS.endpointsFromRows(rows);
+  if (!$('pName').value.trim()) $('pName').value = res.name.slice(0, 40);
+  if (ends.white !== null) $('pWhite').value = inVal(ends.white);
+  if (ends.black !== null) $('pBlack').value = inVal(Math.max(ends.black, 1e-4));
+  $('pTone').value = 'table';
+  $('pTable').value = rows.map(([v, L]) => `${Number(v.toFixed(3))}, ${inVal(L)}`).join('\n');
+  document.querySelector('#profDlg details.extra').open = true;
+  const missing = [ends.black === null ? '0% (black)' : '', ends.white === null ? '100% (white)' : ''].filter(Boolean);
+  $('pFileInfo').textContent = missing.length
+    ? `Loaded ${rows.length} gray readings from "${res.name}". The file has no ${missing.join(' or ')} reading, so type ${missing.length > 1 ? 'those' : 'that'} in yourself above.`
+    : `Loaded ${rows.length} gray readings from "${res.name}". Check them, then Save.`;
+  syncDlg();
+});
+function tableOK(table, W, B) { return table.length > 0 && tableLUT(new Float32Array(256), table, W, B); }
+function syncDlg() {
+  const dyn = document.querySelector('input[name=pIris]:checked').value === 'dynamic';
+  $('pDynBox').hidden = !dyn;
+  $('pBlackLbl').textContent = dyn ? 'Black, with dynamic iris on' : 'Black (all-black picture)';
+  $('pGammaBox').hidden = $('pTone').value !== 'gamma';
+  $('pTableBox').hidden = $('pTone').value !== 'table';
+  if ($('pTone').value === 'table') {
+    const t = parseTableText($('pTable').value), W = fromU(parseFloat($('pWhite').value)) || 100, B = fromU(parseFloat($('pBlack').value)) || W / 2000;
+    $('pTableInfo').textContent = !t.length ? 'You can paste these from Calman or HCFR.'
+      : tableOK(t, W, B) ? (SGS.endpointsFromRows(t).black === null || SGS.endpointsFromRows(t).white === null
+        ? `${t.length} readings found. There's no 0% or 100% reading, so your White and Black boxes set the ends of the curve.`
+        : `${t.length} readings found. Looks good.`) : `${t.length} readings found, but none are between 0% and 100%. Check the numbers.`;
+  }
+}
+function openProfile(p) {
+  editing = p;
+  $('profDlgTitle').textContent = p ? 'Edit reading' : 'Add a reading';
+  $('pName').value = p ? p.name : '';
+  $('pWhite').value = p ? inVal(p.white) : '';
+  $('pBlack').value = p ? inVal(p.black) : '';
+  for (const r of document.querySelectorAll('input[name=pIris]')) r.checked = r.value === (p ? p.iris : 'fixed');
+  $('pBlackOpen').value = p && p.blackOpen ? inVal(p.blackOpen) : '';
+  $('pTone').value = p ? p.tone : 'bt1886';
+  $('pGamma').value = p ? p.gamma : 2.4;
+  $('pTable').value = p && p.table.length ? p.table.map(([v, L]) => `${Number(v.toFixed(2))}, ${inVal(L)}`).join('\n') : '';
+  $('pAnsi').value = p && p.ansi ? p.ansi : '';
+  $('pNotes').value = p ? p.notes : '';
+  $('pErr').textContent = '';
+  $('pFileInfo').textContent = 'ColourSpace (.bcs) or a CSV of gray readings';
+  document.querySelector('#profDlg details.extra').open = !!(p && (p.tone !== 'bt1886' || p.ansi || p.notes));
+  for (const el of document.querySelectorAll('#profDlg .u')) el.textContent = U();
+  syncDlg();
+  dlg.showModal();
+  $('pName').focus();
+}
+dlg.addEventListener('input', syncDlg);
+dlg.addEventListener('change', syncDlg);
+$('pCancel').addEventListener('click', () => dlg.close());
+$('profForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('pName').value.trim();
+  const W = fromU(parseFloat($('pWhite').value)), B = fromU(parseFloat($('pBlack').value));
+  const iris = document.querySelector('input[name=pIris]:checked').value;
+  const boRaw = $('pBlackOpen').value.trim(), BO = boRaw === '' ? null : fromU(parseFloat(boRaw));
+  const tone = $('pTone').value, gamma = parseFloat($('pGamma').value);
+  const table = parseTableText($('pTable').value);
+  const ansiRaw = $('pAnsi').value.trim(), ansi = ansiRaw === '' ? null : parseFloat(ansiRaw);
+  let err = '';
+  if (!name) err = 'Give the reading a name, for example "Iris 3".';
+  else if (!(W > 0)) err = 'Enter your White reading.';
+  else if (!(B > 0)) err = 'Enter your Black reading. If your meter shows 0, enter 0.001.';
+  else if (B >= W) err = 'Black must be lower than White. Check that both use the same unit.';
+  else if (iris === 'dynamic' && BO !== null && !(BO >= B && BO < W)) err = 'Black with the dynamic iris off should be the same or higher than with it on, and lower than White.';
+  else if (tone === 'gamma' && !(gamma >= 1.5 && gamma <= 3.2)) err = 'Gamma should be between 1.5 and 3.2.';
+  else if (tone === 'table' && !tableOK(table, W, B)) err = 'Add grayscale readings with at least one between 0% and 100%, or pick another brightness curve.';
+  else if (ansi !== null && !(ansi > 1)) err = 'Checkerboard contrast must be more than 1, for example 300.';
+  if (err) { $('pErr').textContent = err; return; }
+  const p = sanitizeProfile({ id: editing ? editing.id : uid(), name, white: W, black: B, iris, blackOpen: iris === 'dynamic' ? BO : null, tone, gamma: gamma || 2.4, table: tone === 'table' ? table : (editing ? editing.table : []), ansi, notes: $('pNotes').value.trim(), example: false });
+  if (editing) { const i = S.profiles.findIndex(q => q.id === editing.id); if (i >= 0) S.profiles[i] = p; }
+  else if (S.profiles.length < MAXP) { S.profiles.push(p); S.profA = p.id; if (S.linked) S.profB = p.id; }
+  dlg.close(); renderProfiles(); changed();
+  toast(editing ? `Saved “${p.name}”` : `Added “${p.name}”`);
+});
+
+// screens
+const presetOpts = PRESETS.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('') + '<option value="custom">Custom</option>';
+for (const k of ['a', 'b']) {
+  const scr = () => k === 'a' ? S.screenA : S.screenB;
+  const custom = () => { scr().preset = 'custom'; $(k + 'Preset').value = 'custom'; };
+  $(k + 'Preset').innerHTML = presetOpts;
+  $(k + 'Preset').addEventListener('change', e => {
+    const p = PRESETS.find(x => x.id === e.target.value), s = scr();
+    if (p) { const generic = !s.name.trim() || PRESETS.some(x => x.name === s.name); Object.assign(s, { preset: p.id, gain: p.gain, rej: p.rej, half: p.half, lobe: p.lobe, gainMeasured: false, rejMeasured: false }); if (generic) s.name = p.name; }
+    else { s.preset = 'custom'; $(k + 'Fine').open = true; }
+    renderScreens(); renderRoom(); changed();
+  });
+  $(k + 'Name').addEventListener('input', e => { scr().name = e.target.value.slice(0, 40); changed(); });
+  onNum($(k + 'Gain'), v => { if (v >= 0.1) { scr().gain = clamp(v, 0.1, 5); scr().gainMeasured = false; custom(); } });
+  onNum($(k + 'Rej'), v => { scr().rej = clamp(v, 0, 95); scr().rejMeasured = false; custom(); renderRoom(); });
+  onNum($(k + 'Half'), v => { scr().half = clamp(v, 0, 90); custom(); });
+  onNum($(k + 'Size'), v => { if (v >= 40) scr().size = clamp(v, 40, 400); });
+}
+function gainCalc() {
+  const E = parseFloat($('gainLux').value), L = parseFloat($('gainLum').value);
+  const g = E > 0 && L > 0 ? (S.units === 'ftl' ? L / E : Math.PI * L / E) : NaN;
+  $('gainOut').textContent = isFinite(g) ? `Your real gain: ${g.toFixed(2)}` : 'Enter both readings';
+  $('gainUse').disabled = !(g >= 0.1 && g <= 5);
+  $('gainUse').dataset.g = isFinite(g) ? g.toFixed(2) : '';
+}
+$('gainLux').addEventListener('input', gainCalc);
+$('gainLum').addEventListener('input', gainCalc);
+$('gainUse').addEventListener('click', () => { const g = parseFloat($('gainUse').dataset.g); if (g > 0) { S.screenA.gain = g; S.screenA.gainMeasured = true; S.screenA.preset = 'custom'; renderScreens(); changed(); toast(`Your screen's gain is now ${g}`); } });
+
+// Screen B from a sample taped onto screen A: the reading ratio is B's gain relative to A.
+function sampleCalc() {
+  const wa = parseFloat($('smpWA').value), wb = parseFloat($('smpWB').value), la = parseFloat($('smpLA').value), lb = parseFloat($('smpLB').value);
+  const g = wa > 0 && wb > 0 ? S.screenA.gain * wb / wa : NaN, ok = g >= 0.1 && g <= 5;
+  const rejA = clamp(S.screenA.rej, 0, 95) / 100;
+  const rej = la > 0 && lb >= 0 ? clamp(Math.round((1 - (lb / la) * (1 - rejA)) * 1000) / 10, 0, 95) : NaN;
+  const diff = ok ? Math.round((wb / wa - 1) * 100) : 0;
+  $('smpOut').textContent = !ok ? 'Enter the two white readings'
+    : `B's gain: ${g.toFixed(2)} (${diff === 0 ? 'same as' : Math.abs(diff) + '% ' + (diff > 0 ? 'brighter than' : 'dimmer than')} yours)${isFinite(rej) ? `, blocks ${rej}%` : ''}`;
+  $('smpUse').disabled = !ok;
+  $('smpUse').dataset.g = ok ? String(g) : '';
+  $('smpUse').dataset.r = isFinite(rej) ? String(rej) : '';
+}
+for (const id of ['smpWA', 'smpWB', 'smpLA', 'smpLB']) $(id).addEventListener('input', sampleCalc);
+$('smpUse').addEventListener('click', () => {
+  const g = parseFloat($('smpUse').dataset.g), r = $('smpUse').dataset.r;
+  if (!(g > 0)) return;
+  Object.assign(S.screenB, { gain: Number(g.toFixed(3)), gainMeasured: true, preset: 'custom' });
+  if (r !== '') Object.assign(S.screenB, { rej: +r, rejMeasured: true });
+  renderScreens(); renderRoom(); changed();
+  toast('Screen B now uses your sample readings');
+});
+
+// ambient light
+$('ambRange').addEventListener('input', e => { S.ambient = posToAmb(+e.target.value); renderRoom(); changed(); });
+$('ambNum').addEventListener('input', e => { const v = parseFloat(e.target.value); if (Number.isFinite(v) && v >= 0) { S.ambient = clamp(fromU(v), 0, 1000); renderRoom(true); changed(); } });
+
+// seat & geometry
+$('seat').addEventListener('input', e => { S.seat = +e.target.value; $('seatOut').textContent = sideText(); changed(); });
+$('geoOn').addEventListener('change', e => { S.geo.on = e.target.checked; $('geoBox').hidden = !S.geo.on; changed(); });
+onNum($('geoDist'), v => { S.geo.dist = clamp(v, 0.5, 100); $('seatOut').textContent = sideText(); });
+$('geoAspect').addEventListener('change', e => { S.geo.aspect = e.target.value; changed(); });
+$('geoDistU').addEventListener('change', e => { const m = e.target.value; if (m !== S.geo.distUnit) { S.geo.dist = Number((m === 'm' ? S.geo.dist * 0.3048 : S.geo.dist / 0.3048).toFixed(1)); S.geo.distUnit = m; $('seatOut').textContent = sideText(); $('geoDist').value = S.geo.dist; changed(); } });
+
+// display scale
+$('dispSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.display.mode = b.dataset.mode; renderDisplay(); changed(); });
+onNum($('monNits'), v => { if (v > 0) S.display.monitor = clamp(fromU(v), 1, 10000); });
+
+// SDR / HDR
+$('contentSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.content = b.dataset.content;
+  if (S.content === 'sdr' && currentScene().make) { S.scene = SCENES[0].id; renderSceneStrip(); }
+  renderContent(); changed();
+});
+$('hdrTm').addEventListener('change', e => { S.hdr.tm = e.target.value; changed(); });
+$('hdrBSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.hdr.bMode = b.dataset.bmode; renderContent(); changed(); });
+$('hdrTarget').addEventListener('input', e => { const v = parseFloat(e.target.value); S.hdr.target = v >= 20 && v <= 4000 ? v : null; changed(); });
+async function setPQ() {
+  const sc = currentScene();
+  if (!sc.upload || !sc.isPng) return;
+  const on = $('isPQ').checked, limited = $('pqRange').value === 'limited';
+  try {
+    if (on) {
+      if (!sc.png || !sc.png.rgb) sc.png = await decodePNG(await sc.file.arrayBuffer());
+      if (!sc.png || !sc.png.rgb) throw new Error('unsupported PNG');
+      sc.hdr = pqImageToNits(sc.png, limited); sc.pq = true; sc.limited = limited;
+      makeThumb(sc, hdrPreview(sc.hdr).canvas);
+    } else { sc.hdr = null; sc.pq = false; }
+    dropCaches(sc.id); renderSceneStrip(); invalidate();
+  } catch (e) {
+    $('isPQ').checked = false; sc.pq = false; sc.hdr = null;
+    toast(/primaries/.test(e && e.message) ? "That PNG is tagged with a color space this app can't read yet." : "That PNG couldn't be read as HDR. Use a non-interlaced 8- or 16-bit PNG.");
+  }
+}
+$('isPQ').addEventListener('change', setPQ);
+$('pqRange').addEventListener('change', () => { if ($('isPQ').checked) setPQ(); });
+
+// view, zoom, split, flip
+$('viewSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.view = b.dataset.view; renderView(); changed(); });
+$('zoomSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; S.zoom = b.dataset.zoom; renderView(); changed(); });
+function toggleFlip() { const showB = stage.dataset.show !== 'b'; stage.dataset.show = showB ? 'b' : 'a'; $('caps').dataset.show = stage.dataset.show; $('flipBtn').textContent = showB ? 'Show A' : 'Show B'; }
+$('flipBtn').addEventListener('click', toggleFlip);
+function setSplit(f) { S.split = clamp(f, 0, 1); stage.style.setProperty('--split', (S.split * 100) + '%'); $('divider').setAttribute('aria-valuenow', String(Math.round(S.split * 100))); }
+let dragging = false;
+const div = $('divider');
+div.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); dragging = true; div.setPointerCapture(e.pointerId); });
+div.addEventListener('pointermove', e => { if (!dragging) return; const r = frame.getBoundingClientRect(); setSplit((e.clientX - r.left) / r.width); });
+const endDrag = () => { if (dragging) { dragging = false; persist(); } };
+div.addEventListener('pointerup', endDrag);
+div.addEventListener('pointercancel', endDrag);
+frame.addEventListener('click', e => {
+  if (e.target.closest('.divider')) return;
+  if (S.view === 'flip') toggleFlip();
+  else if (S.view === 'split' && S.zoom === 'fit') { const r = frame.getBoundingClientRect(); setSplit((e.clientX - r.left) / r.width); persist(); }
+});
+stage.addEventListener('keydown', e => {
+  if (S.view === 'split' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); setSplit(S.split + (e.key === 'ArrowLeft' ? -0.02 : 0.02)); persist(); }
+  else if (S.view === 'flip' && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); toggleFlip(); }
+});
+stage.addEventListener('pointermove', probeMove);
+stage.addEventListener('pointerleave', () => { $('probe').hidden = true; });
+
+// scenes: pick, upload, drop, paste
+$('scenes').addEventListener('click', e => {
+  const rm = e.target.closest('button[data-rm]'); if (rm) { removeUpload(rm.dataset.rm); return; }
+  const b = e.target.closest('button.scene'); if (b) selectScene(b.dataset.id);
+});
+$('fileIn').addEventListener('change', e => { addFiles([...e.target.files]); e.target.value = ''; });
+let dragDepth = 0;
+stage.addEventListener('dragenter', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) { dragDepth++; $('drop').hidden = false; } });
+stage.addEventListener('dragover', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); });
+stage.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('drop').hidden = true; });
+stage.addEventListener('drop', e => { e.preventDefault(); dragDepth = 0; $('drop').hidden = true; addFiles([...(e.dataTransfer?.files || [])]); });
+document.addEventListener('paste', e => {
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
+  if (files.length) { e.preventDefault(); addFiles(files); }
+});
+
+// ---------- files: save image, backup & restore
+let dl = null;
+function canSave() { return !!dl || !inClaude; }
+async function saveFile(filename, data) {
+  if (dl) {
+    try { await dl.save({ filename, data }); toast('Saved ' + filename); return true; }
+    catch (e) { if (!e || e.code !== 'declined') toast("This view can't save files. Use Copy as text instead."); return false; }
+  }
+  if (!inClaude) {
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    return true;
+  }
+  toast("This view can't save files.");
+  return false;
+}
+$('saveImgBtn').addEventListener('click', () => {
+  if (!last) return;
+  const W = cvA.width, H = cvA.height, side = S.view === 'side', bar = Math.max(40, Math.round(W / 40));
+  const out = document.createElement('canvas');
+  out.width = side ? W * 2 + 16 : W; out.height = H + bar;
+  const x = out.getContext('2d');
+  x.fillStyle = '#0b0b0b'; x.fillRect(0, 0, out.width, out.height);
+  if (side) { x.drawImage(cvA, 0, 0); x.drawImage(cvB, W + 16, 0); }
+  else if (S.view === 'split') {
+    const sx = Math.round(S.split * W);
+    x.drawImage(cvA, 0, 0);
+    if (sx < W) x.drawImage(cvB, sx, 0, W - sx, H, sx, 0, W - sx, H);
+    x.fillStyle = 'rgba(255,255,255,0.9)'; x.fillRect(sx - 1, 0, 2, H);
+  } else x.drawImage(stage.dataset.show === 'b' ? cvB : cvA, 0, 0);
+  const { sA, sB } = last, u = U();
+  const fs = Math.round(bar * 0.38);
+  x.font = `500 ${fs}px "IBM Plex Mono", ui-monospace, monospace`; x.textBaseline = 'middle';
+  const left = `A ${S.screenA.name} ${fmtG(S.screenA.size)}", ${sA.prof.name}: ${fmtL(sA.whiteC)} ${u}   B ${S.screenB.name} ${fmtG(S.screenB.size)}", ${sB.prof.name}: ${fmtL(sB.whiteC)} ${u}   Ambient ${fmtL(S.ambient)} ${u}`;
+  x.fillStyle = '#e8eaed'; x.fillText(left, fs, H + bar / 2);
+  x.fillStyle = '#7a818a'; x.textAlign = 'right'; x.fillText('Screen Gain Simulator · illustration', out.width - fs, H + bar / 2);
+  out.toBlob(b => { if (b) saveFile('screen-comparison.png', b); }, 'image/png');
+});
+function backupObj() { const o = saveObj(); delete o.view; delete o.zoom; delete o.split; delete o.scene; return { app: 'screen-gain-simulator', saved: new Date().toISOString(), ...o }; }
+const dataDlg = $('dataDlg');
+$('backupBtn').addEventListener('click', () => {
+  $('backupText').value = JSON.stringify(backupObj(), null, 2);
+  $('dlBackup').hidden = !canSave();
+  $('restoreMsg').hidden = true;
+  dataDlg.showModal();
+});
+$('dataClose').addEventListener('click', () => dataDlg.close());
+$('dlBackup').addEventListener('click', () => saveFile('screen-gain-profiles.json', JSON.stringify(backupObj(), null, 2)));
+$('copyBackup').addEventListener('click', () => {
+  const t = $('backupText');
+  t.value = JSON.stringify(backupObj(), null, 2);
+  const fallback = () => { t.focus(); t.select(); toast('Text selected. Press Ctrl+C or ⌘C to copy.'); };
+  try { navigator.clipboard.writeText(t.value).then(() => toast('Backup copied'), fallback); } catch (e) { fallback(); }
+});
+function offerRestore(text) {
+  const m = $('restoreMsg');
+  let obj = null;
+  try { obj = JSON.parse(text); } catch (e) { obj = null; }
+  m.hidden = false;
+  if (!obj || !Array.isArray(obj.profiles) || !obj.profiles.length) { m.innerHTML = '<span class="err">That doesn\'t look like a backup from this app. Paste all of the text, or pick the backup file.</span>'; return; }
+  m.innerHTML = `<span>Replace your ${S.profiles.length} readings and screen settings with the ${Math.min(obj.profiles.length, MAXP)} in this backup?</span> <button type="button" class="btn small primary" id="doRestore">Replace</button> <button type="button" class="btn small" id="noRestore">Cancel</button>`;
+  $('doRestore').onclick = () => {
+    S = applyState({ ...obj, view: S.view, zoom: S.zoom, split: S.split, scene: S.scene });
+    refreshAll(); persist(); m.hidden = true; dataDlg.close(); toast('Backup restored');
+  };
+  $('noRestore').onclick = () => { m.hidden = true; };
+}
+$('restoreText').addEventListener('click', () => offerRestore($('backupText').value));
+$('restoreFile').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f) offerRestore(await f.text()); });
+
+// ---------- start
+(function init() {
+  const local = loadLocal();
+  if (local) S = applyState(local);
+  let lsOK = true; try { localStorage.setItem(LS_KEY + '.t', '1'); localStorage.removeItem(LS_KEY + '.t'); } catch (e) { lsOK = false; }
+  setChip(lsOK ? 'local' : 'none');
+  $('saveImgBtn').hidden = !canSave();
+  refreshAll();
+  let rsT = 0, lastW = 0;
+  const onResize = () => { clearTimeout(rsT); rsT = setTimeout(invalidate, 120); };
+  new ResizeObserver(() => { const w = stage.clientWidth; if (w !== lastW) { lastW = w; onResize(); } }).observe(stage);
+  window.addEventListener('resize', onResize);
+  setTimeout(() => idle(genThumbs), 300);
+  if (inClaude) {
+    window.claude.use('downloads').then(d => { dl = d; $('saveImgBtn').hidden = !canSave(); }).catch(() => {});
+    connectAccount();
+  }
+})();
+})();
+</script>
+
+</body>
+</html>
